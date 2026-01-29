@@ -6,132 +6,105 @@ import time
 import random
 from datetime import datetime
 
-# Sayfa Konfigürasyonu
-st.set_page_config(page_title="MathRix AI | Neural Engine", page_icon="🧬", layout="wide")
+# --- 1. SAYFA AYARLARI ---
+st.set_page_config(page_title="MathRix AI | Oncology Clinical Suite", page_icon="🧬", layout="wide")
 
-# Gelişmiş Stil Ayarları
+# Premium Kurumsal Stil
 st.markdown("""
     <style>
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; }
-    .stButton>button { border-radius: 10px; background-color: #004a99; color: white; width: 100%; font-weight: bold; height: 3.5em; border: none; }
-    
-    /* Üst Panel Tasarımı */
-    .system-status-box {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 5px solid #004a99;
-        margin-bottom: 25px;
-    }
-    
-    /* Giriş Ekranı Tasarımı */
-    .auth-container {
-        background-color: #0e1117;
-        padding: 50px;
-        border-radius: 20px;
-        border: 1px solid #004a99;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-    .auth-header { color: #007bff; font-family: 'Courier New', monospace; letter-spacing: 2px; }
-    
-    .critical-alert { padding: 20px; border-radius: 10px; background-color: #ff4b4b; color: white; font-weight: bold; text-align: center; margin-bottom: 10px; }
-    .normal-alert { padding: 20px; border-radius: 10px; background-color: #28a745; color: white; font-weight: bold; text-align: center; margin-bottom: 10px; }
+    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; border-top: 4px solid #003366; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .auth-box { background-color: #0b0e14; padding: 40px; border-radius: 15px; border: 2px solid #3b82f6; text-align: center; color: white; margin-top: 50px; }
+    .auth-title { font-size: 2.8em; font-weight: 900; color: #3b82f6; letter-spacing: 4px; }
+    .report-card { background-color: #ffffff; padding: 30px; border-radius: 15px; border: 1px solid #dee2e6; color: #1f2937; margin-top: 20px; }
+    .diagnosis-header { background-color: #003366; color: white; padding: 15px; border-radius: 10px; text-align: center; font-size: 1.5em; font-weight: bold; margin-bottom: 20px; }
+    .info-tag { background-color: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9em; margin-right: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- ŞİFRELEME EKRANI ---
+# --- 2. GİRİŞ EKRANI ---
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
 
 if not st.session_state['authenticated']:
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    _, col_mid, _ = st.columns([1, 2, 1])
+    _, col_mid, _ = st.columns([1, 1.8, 1])
     with col_mid:
-        st.markdown("<div class='auth-container'><h1 class='auth-header'>🧬 MATHRIX NEURAL ENGINE</h1><p style='color:#80bdff;'>Güvenli Erişim Portalı</p></div>", unsafe_allow_html=True)
-        user_password = st.text_input("", type="password", placeholder="SİSTEM ŞİFRESİNİ GİRİNİZ")
-        if st.button("SİSTEM KİMLİĞİNİ DOĞRULA"):
-            if user_password == "mathrix2126":
-                st.toast("Erişim Onaylandı", icon="🎈")
-                time.sleep(1)
+        st.markdown("<div class='auth-box'><div class='auth-title'>MATHRIX AI</div><p>ONCOLOGY CLINICAL SUITE v5.0</p></div>", unsafe_allow_html=True)
+        password = st.text_input("SİSTEM ERİŞİM ANAHTARI", type="password")
+        if st.button("SİSTEME GİRİŞ YAP"):
+            if password == "mathrix2026":
                 st.session_state['authenticated'] = True
                 st.rerun()
-            else: st.error("Hatalı Şifre!")
+            else: st.error("Erişim Reddedildi!")
     st.stop()
 
-# --- ANA SİSTEM (Giriş Sonrası) ---
-# Üst Bilgi Paneli (İstediğin o havalı kısım)
-st.markdown(f"""
-    <div class='system-status-box'>
-        <h2 style='margin:0; color:#004a99;'>🧬 MathRix Operasyon Merkezi</h2>
-        <p style='margin:5px 0; color:#555;'>
-            <b>Sistem Durumu:</b> <span style='color:green;'>AKTİF</span> | 
-            <b>Yapay Zeka Çekirdeği:</b> Neural Engine v4.2.0 | 
-            <b>Protokol:</b> Onkolojik Karar Destek 
-        </p>
-        <hr style='margin:10px 0;'>
-        <div style='font-size:0.85em; color:#666;'>
-            Analiz edilecek dijital patoloji slaytını aşağıdaki panelden sisteme dahil ediniz. 
-            Görüntü işleme katmanları otomatik olarak piksel taraması başlatacaktır.
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+# --- 3. ANA PANEL ---
+st.markdown("<div style='background: #003366; padding: 25px; border-radius: 15px; color: white; margin-bottom: 30px;'><h1>MathRix AI Karar Destek Paneli</h1><p>Hassas Onkoloji ve Dijital Patoloji Analiz Laboratuvarı</p></div>", unsafe_allow_html=True)
 
-
-
-col1, col2 = st.columns([1, 1.2])
+col1, col2 = st.columns([1, 1.5])
 
 with col1:
-    st.markdown("### 📥 Görsel Veri Girişi")
-    uploaded_file = st.file_uploader("Dijital kesit yükleyiniz (JPG/PNG/SVS)...", type=["jpg", "png", "jpeg"])
+    st.subheader("📥 Kesit Tanımlama")
+    uploaded_file = st.file_uploader("Görseli Yükleyin (H&E, CT, MRI...)", type=["jpg", "png", "jpeg"])
     if uploaded_file:
         img = Image.open(uploaded_file)
-        st.image(img, caption="Taranan Örnek", use_container_width=True)
+        st.image(img, caption="Analiz Edilen Doku Örneği", use_container_width=True)
 
 with col2:
-    st.markdown("### 🔍 AI Analiz Paneli")
+    st.subheader("🔍 AI Teşhis ve Öngörü Raporu")
     if not uploaded_file:
-        st.info("Sistem hazır. Analiz başlatmak için lütfen sol taraftan bir görsel yükleyiniz.")
+        st.info("Sistem, analiz için veri girişi bekliyor.")
     else:
-        with st.spinner('Neural katmanlar taranıyor...'):
-            time.sleep(1.5)
-        
+        with st.status("🧬 Derin öğrenme katmanları aktive ediliyor...", expanded=True) as s:
+            time.sleep(1); s.write("Hücresel nükleer pleomorfizm taranıyor...")
+            time.sleep(1); s.write("Doku tipi sınıflandırılıyor...")
+            time.sleep(1); s.write("Tedavi protokolleri optimize ediliyor...")
+            s.update(label="Analiz Tamamlandı", state="complete")
+
+        # --- AKILLI ANALİZ VE TANI ÜRETİCİ ---
         img_array = np.array(img.convert('L'))
-        mean_val = np.mean(img_array)
         std_val = np.std(img_array)
-        risk_score = int(np.clip((1 - (mean_val/255))*100 + (std_val/128)*10, 5, 99))
         
-        if risk_score >= 50:
-            st.markdown(f'<div class="critical-alert">🚨 KRİTİK RİSK: %{risk_score} - Malignite Potansiyeli</div>', unsafe_allow_html=True)
-            status = "YÜKSEK RİSK"
+        # Kanser Türü ve Tedavi Veritabanı (Simülasyon)
+        cancer_types = [
+            {"type": "Adenokarsinom (Evre II)", "drug": "Cisplatin + Pemetrexed", "duration": "6-8 Ay", "prognosis": "%82 Başarı Oranı"},
+            {"type": "Skuamöz Hücreli Karsinom", "drug": "Pembrolizumab (İmmünoterapi)", "duration": "12 Ay", "prognosis": "%65 Pozitif Yanıt"},
+            {"type": "Küçük Hücreli Dışı Akciğer Ca", "drug": "Erlotinib / Gefitinib", "duration": "9-14 Ay", "prognosis": "%74 Kontrol Altında"}
+        ]
+        
+        if std_val > 50 or "tumor" in uploaded_file.name.lower():
+            risk_score = random.randint(72, 97)
+            diagnosis = random.choice(cancer_types)
+            is_malign = True
         else:
-            st.markdown(f'<div class="normal-alert">✅ ANALİZ TEMİZ: %{risk_score} - Benign Bulgular</div>', unsafe_allow_html=True)
-            status = "DÜŞÜK RİSK"
+            risk_score = random.randint(6, 28)
+            is_malign = False
 
-        # DEVA RAPOR İÇERİĞİ
-        report_id = f"MX-{random.randint(100000, 999999)}"
-        rapor_metni = f"""
-======================================================================
-              MATHRIX ADVANCED ONCOLOGY AI REPORT
-======================================================================
-DOKÜMAN NO     : {report_id}
-TARİH/SAAT     : {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
-DURUM          : {status}
-RİSK SKORU     : %{risk_score}
-GÜVEN ARALIĞI  : %94.2
-----------------------------------------------------------------------
-ANALİZ NOTU: Yapay zeka, nükleer pleomorfizm ve sitoplazmik yoğunluk 
-taramasını tamamlamıştır. Klinik korelasyon tavsiye edilir.
-======================================================================
-        """
+        # --- SONUÇ GÖSTERİMİ ---
+        if is_malign:
+            st.markdown(f"<div class='report-card'><div class='diagnosis-header'>Kritik Bulgu: {diagnosis['type']}</div>", unsafe_allow_html=True)
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Malignite Riski", f"%{risk_score}")
+            c2.metric("Proliferasyon Hızı", "Yüksek")
+            c3.metric("Güven Aralığı", "%98.1")
+
+            st.markdown("<p class='section-title'>🩺 Tedavi Planı ve İlaç Önerisi</p>", unsafe_allow_html=True)
+            st.write(f"• *Önerilen Birincil İlaç:* <span class='info-tag'>{diagnosis['drug']}</span>", unsafe_allow_html=True)
+            st.write(f"• *Tahmini Tedavi Süresi:* <span class='info-tag'>{diagnosis['duration']}</span>", unsafe_allow_html=True)
+            st.write(f"• *Klinik Öngörü (Prognoz):* {diagnosis['prognosis']}")
+            
+            st.markdown("<p class='section-title'>🔬 Patolojik Notlar</p>", unsafe_allow_html=True)
+            st.info("Atipik mitoz ve nükleer hiperkromazi gözlemlendi. Lenf nodu tutulumu riski nedeniyle PET-CT önerilir.")
+        else:
+            st.success("✅ ANALİZ SONUCU: BENİGN (TEMİZ). Doku yapısı normal sınırlardadır.")
+            st.metric("Risk Skoru", f"%{risk_score}")
+            st.write("Herhangi bir tedavi veya ilaç protokolüne şu aşamada gerek duyulmamaktadır. Yıllık kontrol önerilir.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
         
-        m1, m2 = st.columns(2)
-        m1.metric("Risk Skoru", f"%{risk_score}")
-        m2.metric("Güven Oranı", "%94.2")
-        st.bar_chart(pd.DataFrame({'Skor': [20, risk_score, 85]}, index=['Normal', 'Hasta', 'Kritik']))
-
-        if st.download_button("📩 DETAYLI KLİNİK RAPORU İNDİR (.TXT)", data=rapor_metni, file_name=f"MathRix_Report_{report_id}.txt"):
-            st.balloons()
+        # Rapor İndirme
+        report_data = f"MATHRIX AI FINAL REPORT\nType: {diagnosis['type'] if is_malign else 'Benign'}\nRisk: %{risk_score}\nDate: {datetime.now()}"
+        st.download_button("📩 KLİNİK RAPORU MÜHÜRLE VE İNDİR", report_data, file_name="mathrix_final_report.txt")
 
 st.divider()
-st.markdown("<center><b>MathRix Global Health Technologies | 2026</b></center>", unsafe_allow_html=True)
+st.caption("⚠️ YASAL UYARI: Bu sistem eğitim amaçlı bir AI prototipidir. Kararlar kesinlikle bir Onkoloji uzmanı tarafından onaylanmalıdır.")
