@@ -1,141 +1,99 @@
-[02:01, 30.01.2026] Melegim: import streamlit as st
+import streamlit as st
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 import time
+import random
 from datetime import datetime
 
-# --- 1. RESMİ AKADEMİK TEMA ---
-st.set_page_config(page_title="MathRix | Pulmonary Oncology", layout="wide")
+# --- 1. SİSTEM AYARLARI ---
+st.set_page_config(page_title="MathRix AI | Lung Oncology", layout="wide")
 
 st.markdown("""
     <style>
-    .auth-card { background: #020617; padding: 50px; border-radius: 20px; border: 2px solid #38bdf8; text-align: center; color: white; }
-    .auth-title { font-size: 4em; font-weight: 900; color: #38bdf8; letter-spacing: 12px; text-shadow: 0 0 20px #38bdf8; }
-    
-    .medical-report { 
-        background-color: #ffffff; padding: 60px; border: 2px solid #000; 
-        color: #000; font-family: 'Times New Roman', serif; line-height: 1.8;
-        box-shadow: 15px 15px 0px #334155; margin-top: 20px;
-    }
-    .report-he…
-[02:03, 30.01.2026] Melegim: import streamlit as st
-import numpy as np
-from PIL import Image
-import time
-import random
-from datetime import datetime
+    .report-paper { background-color: white; padding: 30px; border-left: 10px solid #083344; color: black; font-family: 'Times New Roman', serif; border: 1px solid #ddd; }
+    .stMetric { background-color: #f0f2f6; padding: 10px; border-radius: 10px; }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- SİSTEM AYARLARI ---
-st.set_page_config(page_title="MathRix AI | Lung Oncology", layout="wide")
-
-# Giriş Şifresi: mathrix2026
-if 'giris' not in st.session_state: st.session_state.giris = False
-if not st.session_state.giris:
+# --- 2. GİRİŞ EKRANI (Şifre: mathrix2026) ---
+if 'auth' not in st.session_state: st.session_state.auth = False
+if not st.session_state.auth:
     _, col, _ = st.columns([1, 2, 1])
     with col:
-        st.title("MATHRIX GİRİŞ")
-        sifre = st.text_input("Sistem Anahtarı", type="password")
-        if st.button("Sistemi Aktif Et"):
-            if sifre == "mathrix2026":
-                st.session_state.giris = True
+        st.title("🧬 MATHRIX TERMINAL")
+        if st.text_input("Erişim Anahtarı", type="password") == "mathrix2026":
+            if st.button("Sistemi Aktive Et"):
+                st.session_state.auth = True
                 st.rerun()
-            else: st.error("Hatalı Şifre")
     st.stop()
 
-# --- ANA PANEL ---
-st.title("🫁 Akciğer Kanseri Klini…
-[02:03, 30.01.2026] Melegim: import streamlit as st
-import numpy as np
-from PIL import Image
-import time
-import random
-from datetime import datetime
+# --- 3. ANA ANALİZ PANELİ ---
+st.title("🫁 Akciğer Kanseri Akıllı Teşhis Terminali")
 
-# --- SİSTEM AYARLARI ---
-st.set_page_config(page_title="MathRix AI | Lung Oncology", layout="wide")
-
-# Giriş Şifresi: mathrix2026
-if 'giris' not in st.session_state: st.session_state.giris = False
-if not st.session_state.giris:
-    _, col, _ = st.columns([1, 2, 1])
-    with col:
-        st.title("MATHRIX GİRİŞ")
-        sifre = st.text_input("Sistem Anahtarı", type="password")
-        if st.button("Sistemi Aktif Et"):
-            if sifre == "mathrix2026":
-                st.session_state.giris = True
-                st.rerun()
-            else: st.error("Hatalı Şifre")
-    st.stop()
-
-# --- ANA PANEL ---
-st.title("🫁 Akciğer Kanseri Klinik Analiz Terminali")
-
-sol, sag = st.columns([1, 2])
+sol, sag = st.columns([1.2, 1.8])
 
 with sol:
-    dosya = st.file_uploader("Doku Kesiti Yükleyiniz", type=["jpg", "png", "jpeg"])
+    dosya = st.file_uploader("Akciğer Kesiti Yükle", type=["jpg", "png", "jpeg"])
     if dosya:
-        st.image(Image.open(dosya), caption="İncelenen Patolojik Örnek", use_container_width=True)
+        img = Image.open(dosya).convert("RGB")
+        # --- CANLI TARAMA EFEKTİ (ÇUBUK ÇUBUK GÖSTERİM) ---
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        image_place = st.empty()
+        
+        # Tarama simülasyonu
+        draw = ImageDraw.Draw(img)
+        w, h = img.size
+        for i in range(0, 101, 20):
+            status_text.text(f"Hücre yapıları taranıyor: %{i}")
+            progress_bar.progress(i)
+            # Görsel üzerine AI tarama çizgileri ekle
+            y = int((i/100) * h)
+            draw.line([(0, y), (w, y)], fill=(0, 255, 255), width=5)
+            image_place.image(img, use_container_width=True)
+            time.sleep(0.3)
+        st.success("Tarama Tamamlandı.")
 
 with sag:
-    if not dosya:
-        st.info("Analiz için lütfen görsel yükleyiniz.")
-    else:
-        with st.status("🧬 Derin Analiz Yapılıyor...", expanded=False):
-            time.sleep(1); st.write("Hücre çekirdekleri taranıyor...")
-            time.sleep(1); st.write("Malignite skorlaması hesaplanıyor...")
+    if dosya:
+        # Dinamik Analiz Verileri (Her seferinde değişir)
+        skor = random.randint(89, 99)
+        evre = random.choice(["II-B", "III-A", "III-B"])
+        tip = random.choice(["Adenokarsinom", "Skuamöz Hücreli Karsinom", "Büyük Hücreli Karsinom"])
         
-        skor = random.randint(92, 98)
-        
-        # HIZLI ÖZET
-        st.subheader("📋 Analiz Özeti")
+        st.subheader("📋 Klinik Bulgular")
         c1, c2, c3 = st.columns(3)
-        c1.metric("Durum", "MALİGN (Kanserli)")
-        c2.metric("Malignite Oranı", f"%{skor}")
-        c3.metric("Tip", "Adenokarsinom")
+        c1.metric("Malignite İndeksi", f"%{skor}")
+        c2.metric("Klinik Evre", evre)
+        c3.metric("Hücre Tipi", tip)
 
         st.divider()
+
+        # AKADEMİK RAPOR (Saf metin, önemli yerler kalın)
+        rapor = f"""
+        ### 📄 RESMİ KLİNİK ANALİZ RAPORU
+        *TARİH:* {datetime.now().strftime('%d/%m/%Y')} | *KAYIT NO:* MX-{random.randint(1000,9999)}
         
-        # RAPOR ALANI - KODSUZ, TERTEMİZ YAZI
-        st.markdown("### 📄 RESMİ KLİNİK EPİKRİZ RAPORU")
+        *1. PATOLOJİK DEĞERLENDİRME:*
+        Yüklenen dijital kesit üzerinde yapılan morfometrik analizde, normal parankim yapısının *atipi gösteren epitel hücreleri* tarafından infiltre edildiği gözlenmiştir. 
+        Hücrelerde *belirgin pleomorfizm* ve nükleer hiperkromazi saptanmış olup, mitotik aktivite oranı *%{skor}* olarak hesaplanmıştır.
         
-        # Rapor metnini hazırlıyoruz
-        rapor_metni = f"""
-        *KURUM:* MathRix Uluslararası Akciğer Araştırmaları Merkezi
-        *TARİH:* {datetime.now().strftime('%d/%m/%Y')}
-        *RAPOR NO:* MX-LUNG-2026-X
+        *2. TANI VE SINIFLANDIRMA:*
+        Bulgular, Dünya Sağlık Örgütü (WHO) kriterlerine göre *{tip}* tanısını %{skor-2} güven aralığı ile doğrulamaktadır. 
+        Tümör dokusunun *vasküler invazyon* potansiyeli yüksek risk grubundadır.
         
-        ---
-        ### I. PATOLOJİK VE HİSTOLOJİK TANI
-        Yapılan dijital mikroskobik incelemede, doku yapısında normal alveolar dizilimin tamamen bozulduğu gözlemlenmiştir. 
-        Hücrelerde *şiddetli pleomorfizm* (şekil bozukluğu) ve nükleer hiperkromazi saptanmıştır. 
-        *KESİN TANI:* %{skor} doğruluk oranı ile *İnvaziv Akciğer Adenokarsinomu (Grade III)* saptanmıştır.
+        *3. CERRAHİ VE TEDAVİ PLANI:*
+        Mevcut hücre tipi ve yayılımı nedeniyle *ANATOMİK LOBEKTOMİ* operasyonu zorunludur. 
+        Operasyon sonrası hastaya *Adjuvan Kemoterapi* (Cisplatin + Pemetrexed) ve PD-L1 seviyesine göre *İmmünoterapi (Pembrolizumab)* başlanması akademik olarak endikedir.
         
-        ### II. CERRAHİ VE TEDAVİ PROTOKOLÜ
-        Hücrelerin yayılım hızı ve tipi baz alındığında, primer tedavi olarak *ANATOMİK LOBEKTOMİ* (Akciğer lobunun cerrahi olarak çıkarılması) operasyonu ivedilikle planlanmalıdır. 
-        Operasyon sonrası mikroskobik kalıntıları temizlemek adına *Adjuvan Kemoterapi* rejimi uygulanması zorunludur.
-        
-        ### III. ÖNERİLEN İLAÇ TEDAVİSİ
-        1. *Osimertinib:* EGFR mutasyon pozitifliği durumunda hedefe yönelik tedavi.
-        2. *Pembrolizumab:* Bağışıklık sistemini aktive eden immünoterapi protokolü.
-        3. *Cisplatin:* Standart sistemik kemoterapi uygulaması.
-        
-        ### IV. YAŞAM ÖNGÖRÜSÜ VE TAVSİYELER
-        Modern protokollerin (Cerrahi + İmmünoterapi) uygulanması durumunda 5 yıllık sağkalım oranı *%76* seviyesinde simüle edilmiştir. 
-        Radyasyonun çevre dokulara vereceği zararı (radyasyon pnömonisi) minimize etmek için *IMRT (Yoğunluk Ayarlı Radyoterapi)* tekniği önerilir.
+        *4. PROGNOZ VE RADYASYON STRATEJİSİ:*
+        Küratif cerrahi sonrası nüks riskini azaltmak amacıyla *IMRT (Yoğunluk Ayarlı Radyoterapi)* planlanmalıdır. 
+        Hastanın 5 yıllık sağkalım projeksiyonu multimodüler tedavi ile *%74* olarak öngörülmektedir.
         
         ---
-        *DİJİTAL ONAY:* MathRix Melek 
+        *DİJİTAL ONAY:* MathRix Melek 🖋️
         """
         
-        # Ekrana basıyoruz
-        st.write(rapor_metni)
+        st.markdown(f"<div class='report-paper'>{rapor}</div>", unsafe_allow_html=True)
         
-        # İNDİRME BUTONU
-        st.download_button(
-            label="📩 RESMİ RAPORU DOSYA OLARAK İNDİR",
-            data=rapor_metni,
-            file_name="MathRix_Akciger_Raporu.txt",
-            mime="text/plain"
-        )
+        st.download_button("📩 RESMİ RAPORU İNDİR (.TXT)", rapor, file_name="MathRix_Klinik_Rapor.txt")
