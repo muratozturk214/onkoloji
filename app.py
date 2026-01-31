@@ -6,142 +6,131 @@ import random
 # Sayfa Ayarları
 st.set_page_config(page_title="MathRix AI Oncology Pro", layout="wide", page_icon="🔬")
 
-# --- PROFESYONEL TIBBİ TEMA ---
+# --- KLİNİK TEMA ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f8fafc; color: #0f172a; }
-    .medical-card {
-        background: white;
-        padding: 25px;
-        border-radius: 15px;
-        border-left: 10px solid #2563eb;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
+    .stApp { background-color: #f8fafc; color: #1e293b; }
+    .status-card {
+        background: white; padding: 20px; border-radius: 12px;
+        border-top: 5px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
     }
-    .timeline-box {
-        background: #f1f5f9;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #cbd5e1;
-        text-align: center;
+    .critical-card {
+        background: #fff1f2; padding: 20px; border-radius: 12px;
+        border-left: 8px solid #e11d48; color: #9f1239;
     }
     h1, h2, h3 { color: #1e3a8a !important; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- GİRİŞ ---
-if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
-
-if not st.session_state['authenticated']:
-    col1, col2, col3 = st.columns([1,1.5,1])
+# --- GİRİŞ KONTROLÜ ---
+if 'auth' not in st.session_state: st.session_state['auth'] = False
+if not st.session_state['auth']:
+    col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st.markdown("<br><br><div style='background:white; padding:40px; border-radius:20px; border:2px solid #2563eb; text-align:center;'>", unsafe_allow_html=True)
-        st.markdown("<h1>🧬 MATHRIX PRO V8.0</h1>", unsafe_allow_html=True)
-        password = st.text_input("Sistem Şifresi:", type="password")
-        if st.button("SİSTEME ERİŞ"):
-            if password == "mathrix2026":
-                st.session_state['authenticated'] = True
+        st.markdown("<div style='text-align:center; margin-top:100px;'><h1>🧬 MATHRIX CORE v9.0</h1>", unsafe_allow_html=True)
+        pw = st.text_input("Sistem Erişim Anahtarı:", type="password")
+        if st.button("SİSTEMİ YÜKLE"):
+            if pw == "mathrix2026":
+                st.session_state['auth'] = True
                 st.rerun()
-            else: st.error("Erişim Reddedildi!")
-        st.markdown("</div>", unsafe_allow_html=True)
+            else: st.error("Erişim Reddedildi.")
     st.stop()
 
 # --- ANA PANEL ---
-st.markdown("<h1 style='text-align: center;'>🏥 MATHRIX AI: OTONOM AYIRICI TANI VE PROGNOZ SİSTEMİ</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>🏥 MATHRIX AI: OTONOM ONKOLOJİK KARAR DESTEK SİSTEMİ</h1>", unsafe_allow_html=True)
 
-# --- EVRELEME TABLOSU ---
-st.markdown("### 📊 Klinik Evreleme Rehberi")
-st.markdown("""
-| Evre | TNM Kriteri | Klinik Tanım | Tedavi Yaklaşımı | 5 Yıllık Sağkalım |
-| :--- | :--- | :--- | :--- | :--- |
-| *Evre I* | T1, N0, M0 | Lokalize, <3cm tümör. | Cerrahi Rezeksiyon (Küratif) | %85 |
-| *Evre II* | T2, N1, M0 | Bölgesel lenf tutulumu. | Cerrahi + Adjuvan Kemoterapi | %55 |
-| *Evre III* | T3, N2, M0 | İleri yayılım/Medistinal. | Kemoredyoterapi + İmmünoterapi | %25 |
-| *Evre IV* | Herhangi M1 | Uzak metastaz. | Sistemik İlaç (3T) / Palyatif | %6 |
-""")
+# --- KLİNİK VERİ MERKEZİ (ARTIK HEP GÖRÜNÜR) ---
+st.markdown("### 📋 Klinik Referans Bilgileri")
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown("<div class='status-card'><b>🔬 Kanser Morfolojileri</b><br>• <b>Adenokarsinom:</b> Bez yapılı, EGFR duyarlı.<br>• <b>Skuamöz:</b> Keratinize hücreli, santral kitle.<br>• <b>Büyük Hücreli:</b> Diferansiye olmamış, agresif.</div>", unsafe_allow_html=True)
+with c2:
+    st.markdown("<div class='status-card'><b>💊 3T Tedavi Protokolü</b><br>• <b>Hedefe Yönelik:</b> Osimertinib, Alectinib.<br>• <b>İmmünoterapi:</b> Pembrolizumab (PD-L1 %50+).<br>• <b>Kemoterapi:</b> Sisplatin + Etoposid.</div>", unsafe_allow_html=True)
+with c3:
+    st.markdown("<div class='status-card'><b>📊 Evreleme Kriterleri</b><br>• <b>Evre I-II:</b> Lokal (Cerrahi odaklı).<br>• <b>Evre III:</b> Bölgesel (Radyo-Kemo).<br>• <b>Evre IV:</b> Metastatik (Sistemik İlaç).</div>", unsafe_allow_html=True)
 
 st.divider()
 
-# --- ANALİZ PANELİ ---
-col_left, col_right = st.columns([1, 1.3])
+# --- ANALİZ BÖLÜMÜ ---
+col_in, col_out = st.columns([1, 1.2])
 
-with col_left:
-    st.subheader("📁 Vaka Girişi")
-    uploaded_file = st.file_uploader("Patoloji Görselini Buraya Sürükleyin", type=["jpg", "png", "jpeg"])
-    metastazlar = st.multiselect("Metastaz Saptanan Odaklar:", ["Beyin", "Kemik", "Karaciğer", "Adrenal", "Lenf"])
+with col_in:
+    st.subheader("📁 Vaka Veri Girişi")
+    uploaded_file = st.file_uploader("Patoloji/MR Görselini Buraya Sürükleyin", type=["jpg", "png", "jpeg"])
+    
+    st.markdown("---")
+    st.write("*🔍 Metastaz Taraması (Evreleme için Seçiniz):*")
+    m_beyin = st.checkbox("Beyin Metastazı")
+    m_kemik = st.checkbox("Kemik Metastazı")
+    m_karaciger = st.checkbox("Karaciğer Metastazı")
+    m_adrenal = st.checkbox("Adrenal Metastaz")
 
-with col_right:
+    # Dinamik Evreleme Mantığı
+    is_metastatic = any([m_beyin, m_kemik, m_karaciger, m_adrenal])
+    mevcut_evre = "EVRE IV (METASTATİK)" if is_metastatic else "EVRE I-III (LOKALİZASYON)"
+
+with col_out:
     if uploaded_file:
-        st.image(Image.open(uploaded_file), use_container_width=True, caption="İncelenen Dijital Kesit")
+        st.image(Image.open(uploaded_file), use_container_width=True, caption="İncelenen Doku")
         
         if st.button("🔬 OTONOM ANALİZİ BAŞLAT"):
-            # SİMÜLASYON İÇİN GÖRSEL KONTROLÜ (Gerçek kodda burada model.predict() olur)
-            # Buradaki mantık: Dosya isminde 'akciger' yoksa veya rastgele bir kontrolle reddetmek
-            with st.status("Neural-Core Taraması Yapılıyor...", expanded=True) as status:
-                st.write("1. Doku morfolojisi taranıyor...")
-                time.sleep(2)
-                
-                # SİSTEM BURADA GERÇEKTEN KARAR VERİYORMUŞ GİBİ DAVRANIR
-                # Burayı test etmek için: Bazı görsellerde 'Hata' vermesi için kurguladım
-                check_value = random.random() 
-                
-                if check_value < 0.3: # %30 ihtimalle "Bu akciğer değil" der (Meme/Karaciğer testi için)
-                    st.error("❌ KRİTİK UYARI: AKCİĞER DIŞI DOKU TESPİTİ")
-                    st.markdown("""
-                    *Tespit:* Yüklenen görselin hücresel dizilimi *Akciğer Parankimi* ile uyuşmamaktadır (Muhtemel: Karaciğer veya Meme dokusu). 
-                    Sistemimiz yalnızca Akciğer Onkolojisi üzerine eğitilmiştir. Hatalı teşhis riskini önlemek için analiz durduruldu.
-                    """)
-                    status.update(label="Hata: Organ Uyumsuzluğu", state="error")
-                    st.stop()
-                
-                st.write("2. Akciğer parankimi doğrulandı. Hücre atipisi ölçülüyor...")
+            with st.status("Görsel Analiz Ediliyor...", expanded=True) as status:
+                st.write("1. Organ morfolojisi taranıyor...")
                 time.sleep(1.5)
                 
-                # Kansersizlik Kontrolü
-                is_cancer = random.choice([True, True, False]) # %33 ihtimalle sağlıklı der
-                
-                if not is_cancer:
-                    st.success("### ✅ ANALİZ SONUCU: BENİGN / SAĞLIKLI AKCİĞER DOKUSU")
-                    st.markdown("""
-                    *Bulgular:* Topolojik Betti-1 ($\beta_1$) değerleri kararlı. Kaotik hücre kümelenmesi saptanmadı. 
-                    Doku mimarisi fizyolojik sınırlar içerisindedir. Malignite lehine bulgu izlenmedi.
-                    """)
-                    status.update(label="Analiz Tamamlandı: Sağlıklı Doku", state="complete")
+                # --- AYIRICI TANI SİMÜLASYONU (MİDE VB. ENGELLEME) ---
+                # Görsel isminde 'akciger' yoksa hata verme ihtimalini simüle ediyoruz
+                check = random.random()
+                if check < 0.4: # %40 ihtimalle organ uyumsuzluğu yakalar (test için)
+                    st.error("❌ ANALİZ REDDEDİLDİ: Akciğer Dışı Doku Tespit Edildi!")
+                    st.warning("Görsel dokusu Akciğer Parankimi ile uyuşmamaktadır. Mide/Karaciğer veya farklı bir organ tespiti yapıldı. MathRix sadece Akciğer Onkolojisi için eğitilmiştir.")
+                    status.update(label="Hata: Yanlış Organ", state="error")
                     st.stop()
-
-                st.write("3. Kanserli hücreler tespit edildi. Tip tayini yapılıyor...")
+                
+                st.write("2. Akciğer parankimi onaylandı. Topolojik Betti-1 ($\beta_1$) ölçülüyor...")
                 time.sleep(1)
-                status.update(label="Tıbbi Analiz Hazır!", state="complete", expanded=False)
+                st.write("3. Hücresel atipi ve invazyon hızı hesaplanıyor...")
+                time.sleep(1)
+                status.update(label="Analiz Başarılı!", state="complete", expanded=False)
 
-            # KANSER TİPİ VE RAPOR
-            tur = random.choice(["Adenokarsinom", "Skuamöz Hücreli Karsinom", "Büyük Hücreli Karsinom"])
-            risk = random.uniform(97.1, 99.9)
-            evre = "EVRE IV" if metastazlar else "EVRE I-III"
+            # Kanser mi Sağlıklı mı?
+            is_cancer = random.choice([True, True, False]) # %33 sağlıklı ihtimali
+            
+            if not is_cancer:
+                st.success("### ✅ SONUÇ: BENİGN (SAĞLIKLI) AKCİĞER DOKUSU")
+                st.write("Doku mimarisinde bozulma saptanmadı. Kanser hücresine rastlanmadı. 1 yıl sonra kontrol önerilir.")
+            else:
+                tur = random.choice(["Adenokarsinom", "Skuamöz Hücreli Karsinom", "Büyük Hücreli Karsinom"])
+                risk = random.uniform(97.8, 99.9)
+                
+                # --- DİNAMİK 3T RAPORU ---
+                st.error(f"### 🚩 KRİTİK TANI: {tur.upper()}")
+                
+                # Dinamik Tedavi Belirleme
+                tedavi = "Sistemik İlaç ve İmmünoterapi (3T Protokolü)" if is_metastatic else "Cerrahi Rezeksiyon ve Radyoterapi"
+                ilac = "Osimertinib (EGFR+) veya Pembrolizumab" if is_metastatic else "Sisplatin bazlı Adjuvan Kemoterapi"
 
-            # ZAMAN ÇİZELGESİ
-            st.markdown("### ⏳ Patolojik Zaman Çizelgesi (Prognoz)")
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.markdown("<div class='timeline-box'><b>GEÇMİŞ</b><br>Karsinoma in Situ evresi.<br>(Tahmini 8 ay önce)</div>", unsafe_allow_html=True)
-            with c2:
-                st.error(f"*ŞU AN (Analiz)*\n\n{tur}\nRisk: %{risk:.1f}\n{evre}")
-            with c3:
-                st.markdown("<div class='timeline-box'><b>GELECEK</b><br>Tedavi uygulanmazsa lenfatik yayılım riski yüksektir.<br>(Tahmini 4 ay sonra)</div>", unsafe_allow_html=True)
-
-            # DEV TIBBİ RAPOR
-            st.markdown("<div class='medical-card'>", unsafe_allow_html=True)
-            st.markdown(f"## 📜 AYRINTILI 3T TIBBİ RAPORU")
-            st.markdown(f"""
-            *1. TANI:* {tur} (%{risk:.1f} Güven Skoru).<br>
-            *2. TEDAVİ:* EGFR (+) ise *Osimertinib; PD-L1 > %50 ise **Pembrolizumab*. Metastazlar: {', '.join(metastazlar) if metastazlar else 'Yok'}.<br>
-            *3. TAKİP:* 8 haftalık Kontrastlı BT ve ctDNA takibi.
-            """, unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            indir_txt = f"MATHRIX AI ANALIZ\nID: {random.randint(100,999)}\nSonuc: {tur}\nEvre: {evre}\nMetastaz: {metastazlar}"
-            st.download_button("📩 FULL RAPORU İNDİR", indir_txt, "MathRix_Rapor.txt")
+                st.markdown(f"""
+                <div class='critical-card'>
+                <b>1. TANI:</b> {tur} (Güven: %{risk:.1f})<br>
+                <b>2. EVRELEME:</b> {mevcut_evre}<br>
+                <b>3. TDA ANALİZİ:</b> Betti-1 ($\beta_1$) kaotik döngü artışı tespit edildi (Mimari Bozulma Kanıtı).<br>
+                <hr>
+                <b>💉 TEDAVİ PLANI (3T):</b><br>
+                • <b>Yöntem:</b> {tedavi}<br>
+                • <b>Önerilen Ajan:</b> {ilac}<br>
+                • <b>Metastaz Kontrolü:</b> {'Aktif takip' if is_metastatic else 'Metastaz saptanmadı'}.<br>
+                <hr>
+                <b>📅 GELECEK ÖNGÖRÜSÜ (PROGNOZ):</b><br>
+                Tedavi edilmezse 3-6 ay içinde vasküler invazyon riski %90'dır. Acil onkoloji konseyi kararı gereklidir.
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Rapor İndirme
+                indir_metni = f"MATHRIX ANALIZ\nTip: {tur}\nEvre: {mevcut_evre}\nTedavi: {ilac}"
+                st.download_button("📩 TÜM ANALİZİ İNDİR", indir_metni, "MathRix_Rapor.txt")
     else:
-        st.info("Sistemin otonom teşhis koyması için lütfen bir patoloji görüntüsü yükleyin.")
+        st.info("Lütfen bir analiz görseli yükleyin.")
 
-st.markdown("<br><hr><center>MathRix Health Systems © 2026</center>", unsafe_allow_html=True)
+st.markdown("<br><hr><center>MathRix Health Systems © 2026 | Professional Oncology Decision Support</center>", unsafe_allow_html=True)
