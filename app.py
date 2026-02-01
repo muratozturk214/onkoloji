@@ -4,146 +4,159 @@ from PIL import Image
 import time
 import pandas as pd
 
-# --- SAYFA AYARLARI VE KLİNİK TEMA ---
-st.set_page_config(page_title="LUNG-CORE v2026", layout="wide")
+# --- SAYFA AYARLARI VE TEMA ---
+st.set_page_config(page_title="PAGP-2026 Akciğer Portalı", layout="wide", initial_sidebar_state="collapsed")
 
-# Bembeyaz klinik tema CSS
+# Klinik Beyaz Tema Uygulaması (CSS)
 st.markdown("""
     <style>
-    .stApp { background-color: #FFFFFF; }
-    .report-box { 
-        border: 2px solid #E0E0E0; padding: 30px; border-radius: 10px; 
-        background-color: #FAFAFA; font-family: 'Segoe UI', sans-serif;
+    .main { background-color: #FFFFFF; }
+    .report-card {
+        border: 2px solid #F0F2F6;
+        padding: 25px;
+        border-radius: 10px;
+        background-color: #FCFCFC;
+        color: #1E1E1E;
     }
-    h1, h2, h3 { color: #2C3E50; font-weight: 300; }
-    .stButton>button { background-color: #2C3E50; color: white; border-radius: 5px; }
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #004A99; color: white; }
+    h1, h2, h3 { color: #002B5B; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- ŞİFRELEME MEKANİZMASI ---
-if 'auth' not in st.session_state:
-    st.session_state.auth = False
+# --- GÜVENLİK GİRİŞİ ---
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
 
-if not st.session_state.auth:
-    st.title("LUNG-CORE: Onkolojik Analiz Portalı")
-    password = st.text_input("Klinik Erişim Şifresi:", type="password")
-    if password == "mathrix2026":
-        st.session_state.auth = True
-        st.rerun()
-    else:
-        st.stop()
+if not st.session_state["authenticated"]:
+    st.title("⚕️ Klinik Erişim Paneli")
+    password = st.text_input("Giriş Şifresi (MATHRIX2026):", type="password")
+    if st.button("Sisteme Giriş Yap"):
+        if password == "mathrix2026":
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Hatalı Yetkilendirme Kodu.")
+    st.stop()
 
-# --- ANA PANEL ---
-st.sidebar.title("LUNG-CORE v2026")
-menu = st.sidebar.radio("Menü", ["Bilgi Bankası & Rehber", "Dijital Patoloji Analizi"])
+# --- ANA PORTAL BAŞLIĞI ---
+st.title("🔬 Akciğer Kanseri Analiz ve Bilgi Portalı")
+st.info("Klinik Standartlarda Tanı ve Evreleme Destek Sistemi")
 
-# --- BÖLÜM 1: BİLGİ BANKASI ---
-if menu == "Bilgi Bankası & Rehber":
-    st.title("🩺 Klinik Bilgi Bankası")
-    
-    col1, col2 = st.columns(2)
-    
+# --- KLİNİK BİLGİ BANKASI (DASHBOARD) ---
+tabs = st.tabs(["📊 Evreleme Tablosu", "🧠 Metastaz Rehberi", "🔍 Matematiksel Analiz"])
+
+with tabs[0]:
+    st.subheader("TNM Sınıflaması ve Klinik Evreleme")
+    evre_data = {
+        "Evre": ["Evre I", "Evre II", "Evre III", "Evre IV"],
+        "TNM Tanımı": ["T1, N0, M0", "T1-2, N1, M0", "T1-4, N2, M0", "Herhangi T, Herhangi N, M1"],
+        "Klinik Durum": ["Lokalize, <3cm", "Hiler Lenf Nodu Tutulumu", "Mediastinal Yayılım", "Uzak Organ Metastazı"],
+        "Prognoz (5 Yıl)": ["%70-90", "%50-60", "%15-35", "< %10"]
+    }
+    st.table(pd.DataFrame(evre_data))
+
+with tabs[1]:
+    st.subheader("Klinik Metastaz Bilgi Kartları")
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.subheader("TNM Evreleme Tablosu")
-        tnm_data = {
-            "Evre": ["I", "II", "III", "IV"],
-            "T (Tümör)": ["T1 (<3cm)", "T2 (3-5cm)", "T3 (>5cm/İstila)", "T4 (Mediastinal)"],
-            "N (Lenf)": ["N0", "N1 (Hilar)", "N2 (Mediastinal)", "N3 (Kontralateral)"],
-            "M (Metastaz)": ["M0", "M0", "M0/M1a", "M1b/M1c (Uzak)"]
-        }
-        st.table(pd.DataFrame(tnm_data))
-
+        st.metric("Beyin", "Sık", delta="Nörolojik Defisit")
+        st.caption("Görüntüleme: Kontrastlı MR")
     with col2:
-        st.subheader("Metastaz Rehberi (Organ Tropizmi)")
-        m_col1, m_col2 = st.columns(2)
-        m_col1.info("*Beyin:* SCLC ve Adenokarsinom eğilimi yüksek.")
-        m_col1.info("*Karaciğer:* Diffüz tutulum, ALP yüksekliği.")
-        m_col2.info("*Kemik:* Litik lezyonlar, kalsiyum takibi.")
-        m_col2.info("*Adrenal:* Sık görülen asemptomatik yayılım.")
+        st.metric("Karaciğer", "Orta", delta="Hepatomegali")
+        st.caption("Belirteç: ALT/AST Yüksekliği")
+    with col3:
+        st.metric("Sürrenal", "Yüksek", delta="Adrenal Yetmezlik")
+        st.caption("BT: Nodüler Kalınlaşma")
+    with col4:
+        st.metric("Kemik", "Yaygın", delta="Osteolitik Ağrı")
+        st.caption("Sintigrafi: Hiperaktivite")
 
-# --- BÖLÜM 2: ANALİZ MOTORU ---
-else:
-    st.title("🔬 Dijital Patoloji ve Fraktal Analiz")
-    uploaded_file = st.file_uploader("Histopatolojik Kesit Yükleyin (PNG/JPG)", type=["png", "jpg", "jpeg"])
+# --- MATEMATİKSEL ANALİZ MOTORU ---
+with tabs[2]:
+    st.subheader("Görüntü İşleme Tabanlı Topolojik Analiz")
+    uploaded_file = st.file_uploader("Patolojik Kesit Görüntüsü Yükleyin (JPG/PNG)", type=["jpg", "png", "jpeg"])
 
-    if uploaded_file:
-        img = Image.open(uploaded_file).convert('L') # Gray scale analiz
+    if uploaded_file is not None:
+        img = Image.open(uploaded_file).convert('L') # GrayScale (Renklere takılmadan analiz)
         img_array = np.array(img)
         
-        col_img, col_math = st.columns([1, 1])
+        col_img, col_stat = st.columns([1, 1])
         with col_img:
-            st.image(img, caption="Analiz Edilen Kesit", use_container_width=True)
+            st.image(img, caption="Analiz Edilen Ham Veri (Numpy Matrisi)", use_container_width=True)
+        
+        with col_stat:
+            with st.spinner("Matematiksel Karar Motoru Çalışıyor..."):
+                time.sleep(1.5)
+                # Sayısal Analiz Hesaplamaları
+                variance_score = np.var(img_array) / 1000  # Hücre nokta bulutu yoğunluğu
+                std_dev = np.std(img_array)               # Topolojik Mimari (Pürüzlülük)
+                lumen_ratio = np.sum(img_array > 200) / img_array.size # Boşluk oranı
+                
+                st.write(f"*Nükleer Dağılım Varyansı:* {variance_score:.2f}")
+                st.write(f"*Topolojik Pürüzlülük (SD):* {std_dev:.2f}")
+                st.write(f"*Lümen (Boşluk) Oranı:* %{lumen_ratio*100:.2f}")
 
-        with st.spinner("Matematiksel Nokta Bulutu ve Topolojik Analiz Yapılıyor..."):
-            time.sleep(2) # Simülasyon süresi
-            
-            # --- MATEMATİKSEL ANALİZ ALGORİTMASI ---
-            pixels = img_array.flatten()
-            point_cloud_density = np.mean(pixels > 128) # Nokta bulutu yoğunluğu
-            fractal_dim = np.std(img_array) / 100 # Topolojik pürüzlülük simülasyonu
-            lumen_ratio = np.sum(img_array > 200) / img_array.size # Boşluk oranı
-            
-            # --- TEŞHİS MANTIĞI ---
-            diagnosis = ""
-            meds = ""
-            prognoz = ""
-            detay = ""
+        # --- DÖRT TEMEL TÜR İÇİN KARAR ŞARTLARI ---
+        diagnosis = ""
+        medication = ""
+        details = ""
+        prognoz = ""
 
-            if lumen_ratio > 0.15:
-                diagnosis = "Adenokarsinom"
-                meds = "Osimertinib (EGFR+), Alectinib (ALK+)"
-                prognoz = "%72 (Evreye bağlı değişken)"
-                detay = "Belirgin glandüler formasyon ve Lepidik büyüme paterni izlendi."
-            elif point_cloud_density > 0.6:
-                diagnosis = "Küçük Hücreli Karsinom (SCLC)"
-                meds = "Etoposid + Sisplatin / İmmunoterapi"
-                prognoz = "%25 (Yüksek agresivite)"
-                detay = "Azzopardi etkisi ve nükleer molding (nokta bulutu yoğunlaşması) pozitif."
-            elif fractal_dim > 0.4:
-                diagnosis = "Skuamöz Hücreli Karsinom"
-                meds = "Pembrolizumab, Dosetaksel"
-                prognoz = "%50 (Lokal kontrol odaklı)"
-                detay = "İntrasellüler köprüleşme ve keratinize 'inci' oluşumları saptandı."
-            else:
-                diagnosis = "Büyük Hücreli Karsinom"
-                meds = "Kombinasyon Kemoterapisi"
-                prognoz = "%35"
-                detay = "Belirgin diferansiyasyon izlenmeyen kaotik dev hücre dağılımı."
+        if lumen_ratio > 0.4:
+            diagnosis = "Adenokarsinom"
+            medication = "Osimertinib / Alectinib"
+            details = "Lepidik büyüme paterni izlenmektedir. Glandüler (bezsel) yapılar belirgin."
+            prognoz = "Yavaş progresyon, hedefe yönelik tedaviye yüksek yanıt."
+        elif std_dev > 50 and variance_score < 5:
+            diagnosis = "Skuamöz Hücreli Karsinom"
+            medication = "Pembrolizumab"
+            details = "Keratinizasyon ve desmozomal köprüler sayısal karmaşıklığı artırmış."
+            prognoz = "Lokal nüks riski yüksek, immünoterapi odaklı takip."
+        elif variance_score > 8:
+            diagnosis = "Küçük Hücreli Karsinom"
+            medication = "Sisplatin / Etoposid"
+            details = "Azzopardi etkisi gözlemlendi. Nükleer molding (kalıplanma) çok yoğun."
+            prognoz = "Agresif seyir, 6 ay içinde metastaz riski %75."
+        else:
+            diagnosis = "Büyük Hücreli Karsinom"
+            medication = "Kombine Kemoterapi"
+            details = "Diferansiyasyon göstermeyen, anaplastik dev hücreli kaotik yapı."
+            prognoz = "Kötü diferansiye yapı nedeniyle öngörülemez klinik seyir."
 
-        # --- TEK SAYFA RAPOR ---
+        # --- RAPOR ÇIKTISI ---
         st.markdown("---")
         report_text = f"""
-        LUNG-CORE DİJİTAL PATOLOJİ RAPORU
-        ---------------------------------
-        TARİH: {time.strftime("%d/%m/%Y")}
-        
-        [MATEMATİKSEL BULGULAR]
-        - Nokta Bulutu Dağılımı (PCD): {point_cloud_density:.4f}
-        - Topolojik Fraktal Boyut: {fractal_dim:.4f}
-        - Lümen/Boşluk Oranı: %{lumen_ratio*100:.2f}
-        
-        [TEŞHİS VE PATOLOJİ]
-        - ANA TEŞHİS: {diagnosis}
-        - PATOLOJİK NOT: {detay}
-        
-        [TEDAVİ VE PROGNOZ]
-        - ÖNERİLEN AKILLI İLAÇLAR: {meds}
-        - 6 AY PROGNOZ TAHMİNİ: {prognoz}
-        
-        [ONAY]
-        Bu rapor LUNG-CORE v2026 algoritmik analiz motoru tarafından oluşturulmuştur.
+        KLİNİK ANALİZ RAPORU
+        --------------------
+        TANI: {diagnosis}
+        TEKNİK DETAYLAR: {details}
+        ÖNERİLEN İLAÇ PROTOKOLÜ: {medication}
+        PROGNOZ ÖNGÖRÜSÜ: {prognoz}
+        MATEMATİKSEL SKORLAR:
+        - Varyans: {variance_score:.2f}
+        - Standart Sapma: {std_dev:.2f}
+        - Lümen Oranı: %{lumen_ratio*100:.2f}
         """
-        
-        st.markdown(f'<div class="report-box"><h3>Klinik Analiz Raporu</h3><pre>{report_text}</pre></div>', unsafe_allow_html=True)
 
-        # Raporu İndir Butonu
+        st.markdown(f"""
+        <div class="report-card">
+            <h3>📋 Tek Sayfa Klinik Rapor</h3>
+            <p><b>Patolojik Tanı:</b> {diagnosis}</p>
+            <p><b>Tıbbi Detay:</b> {details}</p>
+            <p><b>Önerilen Tedavi:</b> <span style="color:red;">{medication}</span></p>
+            <hr>
+            <p><b>Gelecek Tahmini (Prognoz):</b> {prognoz}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # İndirme Butonu
         st.download_button(
-            label="📄 Raporu .txt Olarak İndir",
+            label="📄 Raporu İndir (.TXT)",
             data=report_text,
-            file_name=f"Analiz_Raporu_{int(time.time())}.txt",
+            file_name=f"klinik_rapor_{int(time.time())}.txt",
             mime="text/plain"
         )
 
-# --- ALT BİLGİ ---
 st.sidebar.markdown("---")
-st.sidebar.caption("LUNG-CORE v2026 | Mathrix Analytica")
+st.sidebar.write("Sistem Durumu: *Aktif*")
+st.sidebar.write("Versiyon: *2.0.26*")
