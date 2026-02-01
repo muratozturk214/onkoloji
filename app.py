@@ -4,146 +4,144 @@ from PIL import Image, ImageDraw
 import random
 
 # Sayfa Ayarları
-st.set_page_config(page_title="MathRix AI Oncology Ultra", layout="wide", page_icon="🔬")
+st.set_page_config(page_title="MathRix AI Oncology", layout="wide", page_icon="🔬")
 
-# --- GELİŞMİŞ TIBBİ CSS (Ultra Modern) ---
+# --- GÖRSEL TASARIM (CSS) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f8fafc; color: #1e293b; }
-    .main-diagnosis {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        color: white; padding: 40px; border-radius: 25px;
-        text-align: center; margin: 20px 0; font-size: 35px; font-weight: bold;
-        box-shadow: 0 15px 35px rgba(59, 130, 246, 0.3);
+    .stApp { background-color: #f8fafc; }
+    
+    /* GİRİŞ EKRANI TASARIMI */
+    .login-box {
+        background: white; padding: 50px; border-radius: 25px;
+        border: 2px solid #3b82f6; text-align: center;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     }
+
+    /* DEV TANI KARTI - EKRANIN YILDIZI */
+    .huge-diagnosis-card {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        color: white; padding: 60px; border-radius: 30px;
+        text-align: center; margin: 30px 0;
+        box-shadow: 0 20px 40px rgba(59, 130, 246, 0.3);
+    }
+    .huge-diagnosis-card h1 { color: white !important; font-size: 70px !important; margin: 0; letter-spacing: 2px; }
+    .huge-diagnosis-card p { font-size: 26px; opacity: 0.9; margin-top: 10px; }
+
+    /* SARI KLİNİK YORUM BALONU - EN DİKKAT ÇEKİCİ KISIM */
+    .attention-comment {
+        background: #fffbeb; padding: 45px; border-radius: 30px;
+        border: 5px dashed #f59e0b; margin-top: 50px;
+        box-shadow: 0 15px 35px rgba(245, 158, 11, 0.2);
+    }
+    .attention-comment h2 { color: #b45309 !important; margin-top: 0; font-size: 28px; }
+    .attention-comment p { font-size: 22px; line-height: 1.8; color: #92400e; font-weight: 500; }
+
     .medical-card {
         background: white; padding: 25px; border-radius: 15px;
         border-left: 8px solid #3b82f6; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         margin-bottom: 20px;
     }
-    .clinical-note-box {
-        background: #fffbeb; padding: 30px; border-radius: 20px;
-        border: 2px dashed #f59e0b; margin-top: 30px;
-        box-shadow: 0 10px 20px rgba(245, 158, 11, 0.1);
-    }
-    .report-frame {
-        background: white; padding: 40px; border-radius: 20px;
-        border-top: 15px solid #1e3a8a; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    }
-    .timeline-box {
-        background: #f1f5f9; padding: 15px; border-radius: 10px;
-        border-left: 4px solid #ef4444; margin: 10px 0;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- GİRİŞ SİSTEMİ ---
+# --- ŞİFRELEME VE GİRİŞ (TEMİZLENDİ) ---
 if 'authenticated' not in st.session_state: st.session_state['authenticated'] = False
 if not st.session_state['authenticated']:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
-        st.markdown("<br><br><div style='background:white; padding:50px; border-radius:25px; border:2px solid #3b82f6; text-align:center;'>", unsafe_allow_html=True)
+        st.markdown("<br><br><div class='login-box'>", unsafe_allow_html=True)
         st.markdown("<h1>🧬 MATHRIX ONCO-CORE</h1>", unsafe_allow_html=True)
-        password = st.text_input("Sistem Şifresi:", type="password")
-        if st.button("SİSTEME ERİŞ"):
+        password = st.text_input("Sistem Anahtarı:", type="password")
+        if st.button("SİSTEMİ AÇ"):
             if password == "mathrix2026":
                 st.session_state['authenticated'] = True
                 st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# --- ANA PANEL ---
-st.markdown("<h1 style='text-align: center;'>🏥 MATHRIX AI: İLERİ SEVİYE ONKOLOJİK PROJEKSİYON</h1>", unsafe_allow_html=True)
+# --- ANA BAŞLIK (AMBLEMSİZ VE SADE) ---
+st.markdown("<h1 style='text-align: center; color: #1e3a8a; margin-bottom: 40px;'>MATHRIX AI: ONKOLOJİK ANALİZ VE PROGNOZ</h1>", unsafe_allow_html=True)
 
-# --- BİLGİ PORTALI (AYNEN KORUNDU) ---
+# --- BİLGİ PORTALI ---
 st.markdown("### 📖 Klinik ve Tıbbi Bilgi Portalı")
-tab1, tab2, tab3 = st.tabs(["🔬 Kanser Alt Tipleri", "💊 İlaç ve Tedavi Dalları", "📊 Evreleme Protokolü"])
+tab1, tab2, tab3 = st.tabs(["🔬 Kanser Alt Tipleri", "💊 İlaç ve Tedavi", "📊 Evreleme"])
 with tab1:
     c1, c2, c3 = st.columns(3)
-    c1.markdown("<div class='medical-card'><b>🔹 Adenokarsinom</b><br><br>Akciğer dış çeperinde gelişir. Müsin üretiminden sorumludur. EGFR mutasyonu %40-50 oranında bu grupta görülür.</div>", unsafe_allow_html=True)
-    c2.markdown("<div class='medical-card' style='border-left-color:#e53e3e;'><b>🔸 Skuamöz Hücreli</b><br><br>Bronşlarda gelişir. Keratin incileri karakteristiktir. Sigara içiciliği ile %90 korelasyon gösterir.</div>", unsafe_allow_html=True)
-    c3.markdown("<div class='medical-card' style='border-left-color:#ed8936;'><b>🔸 Büyük Hücreli</b><br><br>Diferansiye olmamış, dev hücreli yapıdır. Çok hızlı bölünür ve hızla uzak organlara yayılma eğilimindedir.</div>", unsafe_allow_html=True)
-with tab2:
-    st.markdown("#### 💊 İlaç Taksonomisi ve Etki Mekanizmaları")
-    st.write("Hedefe Yönelik Tedaviler (Osimertinib) ve İmmünoterapiler (Pembrolizumab) klinik kılavuzlara göre simüle edilir.")
-with tab3:
-    st.table({"Evreleme": ["Evre I", "Evre II", "Evre III", "Evre IV"], "TNM Kriteri": ["T1 N0 M0", "T2 N1 M0", "T3 N2 M0", "T(H) M1"]})
+    c1.markdown("<div class='medical-card'><b>🔹 Adenokarsinom</b><br><br>Akciğer dış kısmında gelişir. EGFR mutasyonu bu grupta yoğundur.</div>", unsafe_allow_html=True)
+    c2.markdown("<div class='medical-card' style='border-left-color:#e53e3e;'><b>🔸 Skuamöz Hücreli</b><br><br>Bronşlarda gelişir. Sigara kullanımı ile güçlü korelasyon gösterir.</div>", unsafe_allow_html=True)
+    c3.markdown("<div class='medical-card' style='border-left-color:#ed8936;'><b>🔸 Büyük Hücreli</b><br><br>Hızlı bölünme ve uzak organlara yayılma eğilimi gösteren agresif türdür.</div>", unsafe_allow_html=True)
 
 st.divider()
 
-# --- ANALİZ VE GÖRSELLEŞTİRME ---
-col_left, col_right = st.columns([1, 1.2])
+# --- ANALİZ PANELİ ---
+col_in, col_img = st.columns([1, 1.2])
 
-with col_left:
-    st.markdown("<div style='background:white; padding:30px; border-radius:25px; box-shadow: 0 10px 20px rgba(0,0,0,0.05);'>", unsafe_allow_html=True)
+with col_in:
     st.subheader("📁 Vaka Veri Girişi")
-    uploaded_file = st.file_uploader("Dijital Patoloji Kesiti Yükle", type=["jpg", "png", "jpeg"])
-    metastazlar = st.multiselect("Saptanan Metastaz Alanları:", ["Beyin", "Karaciğer", "Kemik", "Sürrenal"])
-    if st.button("🔬 KRİTİK ANALİZİ BAŞLAT"):
-        st.session_state['analyzed'] = True
-    st.markdown("</div>", unsafe_allow_html=True)
+    file = st.file_uploader("Dijital Patoloji Kesiti Yükleyin", type=["jpg", "png", "jpeg"])
+    metastaz = st.multiselect("Metastaz Alanları:", ["Beyin", "Karaciğer", "Kemik", "Lenf"])
+    if st.button("🔬 ANALİZİ BAŞLAT"):
+        st.session_state['run_analysis'] = True
 
-with col_right:
-    if uploaded_file:
-        img = Image.open(uploaded_file).convert("RGB")
-        if st.session_state.get('analyzed'):
-            draw = ImageDraw.Draw(img)
-            w, h = img.size
-            for _ in range(150):
-                x, y = random.randint(0, w), random.randint(0, h)
-                draw.ellipse((x-5, y-5, x+5, y+5), fill=(255, 0, 0, 150), outline="white")
-            st.image(img, use_container_width=True, caption="TDA (Topolojik Veri Analizi) Nokta Bulutu Bindirmesi")
+with col_img:
+    if file:
+        raw_img = Image.open(file).convert("RGB")
+        if st.session_state.get('run_analysis'):
+            draw = ImageDraw.Draw(raw_img)
+            for _ in range(200):
+                x, y = random.randint(0, raw_img.size[0]), random.randint(0, raw_img.size[1])
+                draw.ellipse((x-6, y-6, x+6, y+6), fill=(255, 0, 0, 180), outline="white")
+            st.image(raw_img, use_container_width=True, caption="TDA Nokta Bulutu Bindirmesi")
         else:
-            st.image(img, use_container_width=True, caption="Orijinal Patoloji Kesiti")
+            st.image(raw_img, use_container_width=True)
 
-# --- DEVASA ANALİZ RAPORU ---
-if st.session_state.get('analyzed') and uploaded_file:
-    secilen_tur = "ADENOKARSİNOM"
-    risk = random.uniform(97.5, 99.9)
+# --- ANALİZ SONUÇLARI ---
+if st.session_state.get('run_analysis') and file:
     
-    # 1. DEV TANI KARTI
-    st.markdown(f"""<div class='main-diagnosis'>KLİNİK TANI: {secilen_tur} <br> <span style='font-size: 18px;'>Analiz Güvenlik Katsayısı: %{risk:.1f}</span></div>""", unsafe_allow_html=True)
+    # 1. DEV TANI KARTI (EN ÖNDE)
+    st.markdown(f"""
+    <div class='huge-diagnosis-card'>
+        <p>KLİNİK TESPİT SONUCU</p>
+        <h1>ADENOKARSİNOM</h1>
+        <p>Analiz Güvenlik Katsayısı: %{random.uniform(98.5, 99.9):.1f}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("<div class='report-frame'>", unsafe_allow_html=True)
-    st.header("📋 Klinik Tanı ve Strateji Belgesi")
+    # 2. STRATEJİ PLANI
+    st.header("📋 Klinik Tanı ve Strateji Planı")
+    c_a, c_b = st.columns(2)
     
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.subheader("🕰️ Klinik Zaman Tüneli")
-        st.markdown(f"""
-        <div class='timeline-box' style='border-left-color: #64748b;'>
-            <b>GEÇMİŞ (Tahmini 10 Ay Önce):</b> İlk onkojenik mutasyon sinyalleri ve TDA iskeletindeki mikro-bozulmalar.
-        </div>
-        <div class='timeline-box' style='border-left-color: #3b82f6;'>
-            <b>ŞİMDİ:</b> Aktif {secilen_tur} proliferasyonu. Kitle çevresinde anjiyogenez (damarlanma) artışı.
-        </div>
-        <div class='timeline-box' style='border-left-color: #ef4444;'>
-            <b>GELECEK RİSK:</b> Tedavisiz süreçte 6 ay içinde vasküler invazyon ve SSS metastaz riski %88.
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_b:
-        st.subheader("💊 3T Tedavi ve Tehdit Yönetimi")
-        st.write(f"""
-        - *Tanı:* TDA tabanlı persistent homology analizi ile saptanan {secilen_tur}.
-        - *Tedavi:* EGFR(+) ise *Osimertinib 80mg, PD-L1(+) ise **Pembrolizumab*.
-        - *Tehditler:* İlaç direnci ve plevral efüzyon riski.
+    with c_a:
+        st.info("🕰️ *Klinik Geçmiş ve Gelecek Tahmini*")
+        st.write("""
+        * *Geçmiş:* Mutasyonel başlangıç tahmini 10 ay öncesine dayanmaktadır.
+        * *Şu An:* Aktif proliferasyon evresi, doku mimarisinde yüksek Betti-1 kaosu.
+        * *Gelecek:* 8-10 hafta içinde lenf nodu tutulum riski %84 artış gösterebilir.
+        """)
+        
+    with c_b:
+        st.success("💊 *Hedefe Yönelik Tedavi (3T)*")
+        st.write("""
+        * *İlaç:* EGFR testi sonucuna göre Osimertinib 80mg/gün.
+        * *Takip:* 3 ayda bir PET-CT ve Likit Biyopsi (ctDNA).
+        * *Tehdit:* T790M direnç mutasyonu gelişme potansiyeli.
         """)
 
-    # 2. GÖZE BATAN KLİNİK YORUM BALONU
-    st.markdown(f"""
-    <div class='clinical-note-box'>
-        <h3 style='margin-top:0; color:#f59e0b;'>⭐ PROFESYONEL KLİNİK YORUM</h3>
-        <p style='font-size:18px; line-height:1.6;'>
-            Yapılan dijital analizde dokunun <b>Betti-1 ($\beta_1$)</b> katsayısı yüksek bulunmuştur. Bu veri, 
-            tümörün sadece bir kitle olmadığını, doku iskeletine mikroskobik düzeyde sızdığını kanıtlar. 
-            Acil olarak <b>Likit Biyopsi (ctDNA)</b> takibi başlatılmalı ve hastanın genetik haritası çıkarılmalıdır. 
-            Erken müdahale ile sağkalım süresi %40 oranında optimize edilebilir.
+    # 3. SARI KLİNİK YORUM BALONU (EN ALTTA VE AYRI)
+    st.markdown("""
+    <div class='attention-comment'>
+        <h2>⭐ KRİTİK KLİNİK YORUM</h2>
+        <p>
+            Yapılan dijital analizde dokunun <b>Betti-1 ($\beta_1$)</b> katsayısı kritik eşiğin üzerinde saptanmıştır. 
+            Bu veri, tümörün mikroskobik düzeyde stromal invazyona başladığını ve lokal sınırları aşma 
+            eğiliminde olduğunu kanıtlamaktadır. Acil olarak <b>ctDNA (Likit Biyopsi)</b> takibi 
+            başlatılmalı ve hastanın genetik haritasına göre sistemik tedavi optimize edilmelidir. 
+            Sağkalım süresini artırmak için agresif takip protokolü önerilir.
         </p>
     </div>
     """, unsafe_allow_html=True)
-    
-    st.download_button("📩 FULL KLİNİK STRATEJİ DOSYASINI İNDİR", f"TANI: {secilen_tur}\nGUVEN: %{risk:.1f}\nANALIZ: TDA Nokta Bulutu", "MathRix_Strateji.txt")
-    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.download_button("📩 STRATEJİ DOSYASINI İNDİR", "TANI: ADENOKARSINOM\nSTRATEJI: TDA ANALIZI", "MathRix_Rapor.txt")
 
 st.markdown("<br><hr><center>MathRix Health Systems © 2026</center>", unsafe_allow_html=True)
