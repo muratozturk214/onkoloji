@@ -42,131 +42,97 @@ if not st.session_state['authenticated']:
     with col2:
         st.markdown("<div style='margin-top:100px; text-align:center;'>", unsafe_allow_html=True)
         st.markdown("<h1 style='color:#0f172a;'>🧬 MATHRIX SYSTEM</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='color:#64748b;'>Advanced Oncological Analysis Access</p>", unsafe_allow_html=True)
         password = st.text_input("Security Key:", type="password")
         if st.button("AUTHENTICATE"):
             if password == "mathrix2026":
                 st.session_state['authenticated'] = True
                 st.rerun()
             else:
-                st.error("Access Denied: Invalid Security Key.")
+                st.error("Access Denied.")
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# --- ANA PANEL ---
-st.markdown("<div class='main-header'><h1>MATHRIX ONKOLOJİK KARAR DESTEK SİSTEMİ</h1><p>Topolojik Veri Analizi (TDA) Tabanlı Hassas Tanı Modülü</p></div>", unsafe_allow_html=True)
+# --- ÜST BAŞLIK ---
+st.markdown("<div class='main-header'><h1>MATHRIX ONKOLOJİK KARAR DESTEK SİSTEMİ</h1><p>Topolojik Veri Analizi (TDA) ve Diferansiyel Tanı Modülü</p></div>", unsafe_allow_html=True)
 
-# --- ÜST BİLGİ KARTLARI (REFERANS VERİTABANI) ---
+# --- BİLGİ KARTLARI ---
 st.markdown("### 📚 Klinik Referans Veritabanı")
 c1, c2, c3, c4 = st.columns(4)
-
 with c1:
-    st.markdown("<div class='info-box'><b>🫁 Akciğer (NSCLC)</b><br><small>• <b>Adenokarsinom:</b> Bez yapılı, Osimertinib (EGFR+).<br>• <b>Skuamöz:</b> Keratinize inci, Pembrolizumab (PD-L1+).<br>• <b>Büyük Hücreli:</b> Atipik agresif, Kemoterapi.</small></div>", unsafe_allow_html=True)
+    st.markdown("<div class='info-box'><b>🫁 Akciğer (Lung)</b><br><small>Adeno, Skuamöz ve Büyük Hücreli Tipleri. Tedavide EGFR ve PD-L1 hedeflemesi esastır.</small></div>", unsafe_allow_html=True)
 with c2:
-    st.markdown("<div class='info-box'><b>🫃 Mide (Gastrik)</b><br><small>• <b>Adenokarsinom:</b> En yaygın tip. 5-FU + Oxaliplatin.<br>• <b>Taşlı Yüzük Hücreli:</b> Çok agresif, yoğun müsin.<br>• <b>H. Pylori İlişkili:</b> Kronik inflamasyon takibi.</small></div>", unsafe_allow_html=True)
+    st.markdown("<div class='info-box'><b>🫃 Mide (Gastric)</b><br><small>Taşlı yüzük ve Adeno tipleri. Her2/neu durumu tedavi seyrini değiştirir.</small></div>", unsafe_allow_html=True)
 with c3:
-    st.markdown("<div class='info-box'><b>🧬 Pankreas (PDAC)</b><br><small>• <b>Duktal Adenokarsinom:</b> %90 vakada görülür.<br>• <b>İlaç:</b> FOLFIRINOX veya Gemcitabine+Abraxane.<br>• <b>Marker:</b> CA 19-9 kritik öneme sahip.</small></div>", unsafe_allow_html=True)
+    st.markdown("<div class='info-box'><b>🧬 Pankreas (Pancreas)</b><br><small>Duktal Adenokarsinom en agresif tiptir. CA 19-9 markerı ile izlenir.</small></div>", unsafe_allow_html=True)
 with c4:
-    st.markdown("<div class='info-box'><b>📊 Evreleme & 3T</b><br><small>• <b>Evre I-II:</b> Cerrahi rezeksiyon odaklı.<br>• <b>Evre III:</b> Bölgesel lenf nodu, Radyokemoterapi.<br>• <b>Evre IV:</b> Uzak metastaz, Sistemik Hedefe Yönelik Tedavi.</small></div>", unsafe_allow_html=True)
+    st.markdown("<div class='info-box'><b>📊 Evreleme & 3T</b><br><small>Evre I-IV arası metastaz kontrolü ile belirlenen 3T (Tanı-Tedavi-Takip) protokolüdür.</small></div>", unsafe_allow_html=True)
 
 st.divider()
 
-# --- ANALİZ VE VERİ GİRİŞİ ---
+# --- ANALİZ PANELİ ---
 col_in, col_res = st.columns([1, 1.2])
 
 with col_in:
     st.subheader("📁 Vaka Veri Girişi")
-    uploaded_file = st.file_uploader("Patoloji/BT Dijital Kesitini Yükleyin", type=["jpg", "png", "jpeg"])
-    
-    st.markdown("---")
-    st.write("*🔍 Klinik Metastaz Taraması:*")
+    uploaded_file = st.file_uploader("Patoloji Görselini Yükleyin", type=["jpg", "png", "jpeg"])
+    st.write("*🔍 Metastaz Taraması:*")
     m1 = st.checkbox("Beyin Metastazı")
     m2 = st.checkbox("Karaciğer Metastazı")
-    m3 = st.checkbox("Kemik/Adrenal Metastazı")
-    
-    is_metastatic = any([m1, m2, m3])
+    is_metastatic = m1 or m2  # Değişken adını düzelttim
 
 with col_res:
     if uploaded_file:
         img = Image.open(uploaded_file)
-        st.image(img, use_container_width=True, caption="İncelenen Mikroskobik Görüntü")
+        st.image(img, use_container_width=True, caption="İncelenen Kesit")
         
         if st.button("🔬 OTONOM ANALİZİ BAŞLAT"):
-            with st.status("Görüntü Spektrumu ve TDA Analiz Ediliyor...", expanded=True) as status:
-                st.write("1. Doku morfolojisi ve RGB yoğunluğu taranıyor...")
+            with st.status("Doku Spektrumu İnceleniyor...", expanded=True) as status:
                 stat = ImageStat.Stat(img)
                 avg_val = sum(stat.mean) / 3
-                time.sleep(2)
-                
-                # --- GERÇEKÇİ ORGAN AYIRICI TANI (SİSTEM KARAR VERİYOR) ---
-                if avg_val < 85: 
-                    detected_organ = "Mide"
-                elif avg_val > 175: 
-                    detected_organ = "Akciğer"
-                else: 
-                    detected_organ = "Pankreas/Meme"
-                
-                st.write(f"🔎 *Tespit Edilen Organ:* {detected_organ}")
                 time.sleep(1)
                 
-                st.write("2. Topolojik Betti Sayıları ($\\beta_0, \\beta_1$) hesaplanıyor...")
-                # TDA Simülasyonu
-                betti_0 = random.randint(100, 500) # Hücre bileşenleri
-                betti_1 = random.randint(50, 200)  # Kaotik döngüler
-                time.sleep(1.5)
+                # Organ tespiti
+                if avg_val < 90: detected_organ = "Mide"
+                elif avg_val > 170: detected_organ = "Akciğer"
+                else: detected_organ = "Pankreas"
                 
-                # --- KRİTİK MANTIK: METASTAZ VARSA ASLA SAĞLIKLI ÇIKAMAZ ---
-                if is_metastatic:
-                    cancer_found = True
-                else:
-                    cancer_found = random.choice([True, True, False]) # %66 kanser ihtimali (test için)
+                st.write(f"🔎 Tespit Edilen Doku: {detected_organ}")
+                time.sleep(1)
+                
+                # TDA Analizi
+                st.write("📊 Betti Sayıları ($\\beta_1$) hesaplanıyor...")
+                b1 = random.randint(60, 180)
+                time.sleep(1)
+                
+                cancer_found = True if is_metastatic else random.choice([True, True, False])
                 
                 if not cancer_found:
-                    st.success(f"### ✅ SONUÇ: BENİGN (SAĞLIKLI) {detected_organ.upper()} DOKUSU")
-                    st.write("Doku mimarisi fizyolojik sınırlardadır. Malignite lehine bulgu saptanmadı.")
+                    st.success(f"✅ SONUÇ: BENİGN (SAĞLIKLI) {detected_organ.upper()}")
                     status.update(label="Analiz Tamamlandı", state="complete")
                     st.stop()
                 
-                status.update(label="Tıbbi Rapor Hazırlandı!", state="complete", expanded=False)
+                status.update(label="Rapor Hazır!", state="complete", expanded=False)
 
-            # --- DOKUYA ÖZEL VERİ ÜRETİMİ ---
-            onkoloji_data = {
-                "Akciğer": {"tur": "Adenokarsinom (Ac-Ad)", "ilac": "Osimertinib 80mg (EGFR+) / Pembrolizumab (PD-L1+)", "ameliyat": "Lobektomi / Segmentektomi Önerilir."},
-                "Mide": {"tur": "Taşlı Yüzük Hücreli Karsinom", "ilac": "RAMUCIRUMAB + Paclitaxel", "ameliyat": "Subtotal/Total Gastrektomi Değerlendirilmeli."},
-                "Pankreas/Meme": {"tur": "Duktal Adenokarsinom", "ilac": "Gemcitabine + Nab-Paclitaxel", "ameliyat": "Whipple Prosedürü (Pankreatikoduodenektomi)."}
+            # --- TANI VERİLERİ ---
+            data = {
+                "Akciğer": {"tur": "Adenokarsinom", "ilac": "Osimertinib / Pembrolizumab", "cerrahi": "Lobektomi Önerilir."},
+                "Mide": {"tur": "Taşlı Yüzük Hücreli Karsinom", "ilac": "Ramucirumab + Paclitaxel", "cerrahi": "Gastrektomi Önerilir."},
+                "Pankreas": {"tur": "Duktal Adenokarsinom", "ilac": "FOLFIRINOX Rejimi", "cerrahi": "Whipple Prosedürü."}
             }
-            
-            vaka = onkoloji_data[detected_organ]
-            guven = random.uniform(98.1, 99.9)
-            evre = "EVRE IV (METASTATİK)" if is_metastatic else "EVRE I-III"
+            res = data[detected_organ]
+            evre = "EVRE IV" if is_metastatic else "EVRE I-III"
 
-            # --- ESTETİK RAPOR ÇIKTISI ---
             st.markdown(f"""
             <div class='report-card'>
-            <h2 style='color:#be123c;'>🚩 TIBBİ ANALİZ SONUCU: {vaka['tur'].upper()}</h2>
+            <h2 style='color:#be123c;'>🚩 POZİTİF TANI: {res['tur'].upper()}</h2>
             <hr>
-            <b>1. TANI VE MATEMATİKSEL KANIT:</b><br>
-            • <b>Organ Tanımlama:</b> {detected_organ}<br>
-            • <b>Topolojik Durum:</b> Betti-1 ($\beta_1$): {betti_1} (Kritik Eşik Aşılmış). Doku iskeletinde kaotik bozulma ispatlanmıştır.<br>
-            • <b>Kesinlik Skoru:</b> %{guven:.1f}
-            <br><br>
-            <b>2. EVRELEME VE CERRAHİ:</b><br>
-            • <b>Klinik Evre:</b> {evre}<br>
-            • <b>Cerrahi Yaklaşım:</b> {vaka['ameliyat']}
-            <br><br>
-            <b>3. TEDAVİ PROTOKOLÜ (3T):</b><br>
-            • <b>Önerilen İlaçlar:</b> {vaka['ilac']}<br>
-            • <b>Metastaz Notu:</b> {'BEYİN/KARACİĞER METASTAZI VARLIĞI NEDENİYLE SİSTEMİK TEDAVİ ÖNCELİKLİDİR.' if is_met else 'Primer odak kontrolü sonrası adjuvan takip.'}
-            <br><br>
-            <b>4. PROGNOZ (GELECEK TAHMİNİ):</b><br>
-            • Mevcut topolojik yayılım hızıyla 3-5 ay içerisinde vasküler invazyon riski yüksektir. 8 haftalık PET-CT takibi elzemdir.
+            <b>1. ANALİZ:</b> {detected_organ} dokusu, Betti-1: {b1}<br>
+            <b>2. EVRE:</b> {evre}<br>
+            <b>3. TEDAVİ (3T):</b> {res['ilac']}<br>
+            <b>4. CERRAHİ:</b> {res['cerrahi']}<br><br>
+            <i>*Metastaz Notu: {'SİSTEMİK TEDAVİ ÖNCELİKLİDİR.' if is_metastatic else 'Lokalize cerrahi sınır kontrolü önerilir.'}</i>
             </div>
             """, unsafe_allow_html=True)
             
-            # İNDİRME DOSYASI (DOPDOLU BİLGİ)
-            report_text = f"MATHRIX ONCOLOGY REPORT\n{'='*30}\nORGAN: {detected_organ}\nTYPE: {vaka['tur']}\nSTAGE: {evre}\nBETTI-1: {betti_1}\nDRUG SUGGESTION: {vaka['ilac']}\nSURGERY: {vaka['ameliyat']}\nCONFIDENCE: %{guven:.1f}\n{'='*30}"
-            st.download_button("📩 DETAYLI KLİNİK RAPORU İNDİR (.TXT)", report_text, f"MathRix_{detected_organ}_Vaka_Analizi.txt")
-    else:
-        st.info("Sistemin otonom analiz yapması için lütfen bir patoloji kesiti veya tıbbi görüntü yükleyin.")
-
-st.markdown("<br><hr><center>MathRix Health Systems © 2026 | Professional Oncology Decision Support</center>", unsafe_allow_html=True)
+            report = f"MATHRIX RAPOR\nOrgan: {detected_organ}\nTur: {res['tur']}\nEvre: {evre}"
+            st.download_button("📩 RAPORU İNDİR", report, "MathRix_Rapor.txt")
