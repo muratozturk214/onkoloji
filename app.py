@@ -6,15 +6,14 @@ import random
 # Sayfa Ayarları
 st.set_page_config(page_title="MathRix AI Oncology Pro", layout="wide", page_icon="🔬")
 
-# --- FERAH VE AYDINLIK TEMA (SİYAH TAMAMEN KALKTI) ---
+# --- GELİŞMİŞ TıBBİ TEMA (Aydınlık ve Modern) ---
 st.markdown("""
     <style>
-    /* Açık ve ferah arka plan */
     .stApp {
         background-color: #f0f4f8;
         color: #1a365d;
     }
-    /* Profesyonel Beyaz Kartlar */
+    /* Bilgi Kartları */
     .medical-card {
         background-color: white;
         padding: 25px;
@@ -24,7 +23,16 @@ st.markdown("""
         margin-bottom: 20px;
         color: #2d3748;
     }
-    /* Mavi Neon Giriş (Aydınlık Versiyon) */
+    /* Vaka Girişi "Balon" Kutucuğu */
+    .upload-bubble {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 30px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        margin-bottom: 20px;
+    }
+    /* Mavi Neon Giriş */
     .login-box {
         background-color: white;
         padding: 50px;
@@ -58,9 +66,9 @@ if not st.session_state['authenticated']:
     st.stop()
 
 # --- ANA PANEL ---
-st.markdown("<h1 style='text-align: center;'>🏥 MATHRIX AI: ONKOLOJİK ANALİZ VE 3T REHBERİ</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>MATHRIX AI: ONKOLOJİK ANALİZ VE 3T REHBERİ</h1>", unsafe_allow_html=True)
 
-# --- DEV BİLGİ BANKASI (DALLARA AYRILMIŞ) ---
+# --- BİLGİ BANKASI ---
 st.markdown("### 📖 Klinik ve Tıbbi Bilgi Portalı")
 tab1, tab2, tab3 = st.tabs(["🔬 Kanser Alt Tipleri", "💊 İlaç ve Tedavi Dalları", "📊 Evreleme Protokolü"])
 
@@ -73,34 +81,33 @@ with tab1:
 with tab2:
     st.markdown("#### 💊 İlaç Taksonomisi ve Etki Mekanizmaları")
     st.markdown("""
-    * *A) Hedefe Yönelik (Akıllı İlaçlar):* * Osimertinib: T790M mutasyonunu hedef alarak hücre bölünme sinyalini keser.
-        * Alectinib: ALK gen füzyonlarını durdurarak tümör regresyonu sağlar.
-    * *B) İmmünoterapi (Checkpoint Inhibitors):* * Pembrolizumab: PD-L1 bağını keserek bağışıklığın (T-Hücreleri) kansere saldırmasını sağlar.
-        * Nivolumab: Metastatik vakalarda sağkalım süresini (OS) uzatır.
-    * *C) Anti-Anjiyojenikler:* * Bevacizumab: Tümörün damarlanmasını durdurup kanseri aç bırakır.
+    * *A) Hedefe Yönelik (Akıllı İlaçlar):* Osimertinib, Alectinib.
+    * *B) İmmünoterapi:* Pembrolizumab, Nivolumab.
+    * *C) Anti-Anjiyojenikler:* Bevacizumab.
     """)
 
 with tab3:
     st.table({
         "Evreleme": ["Evre I", "Evre II", "Evre III", "Evre IV"],
         "TNM Kriteri": ["T1 N0 M0", "T2 N1 M0", "T3 N2 M0", "T(Herhangi) M1"],
-        "Klinik Anlam": ["Sadece Akciğer", "Lenf Sıçraması", "Göğüs Kafesi Yayılımı", "Uzak Metastaz"],
-        "3T Hedefi": ["Cerrahi / Kür", "Adjuvan Tedavi", "Kemo-Radyoterapi", "Sistemik Kontrol"]
+        "Klinik Anlam": ["Sadece Akciğer", "Lenf Sıçraması", "Göğüs Kafesi Yayılımı", "Uzak Metastaz"]
     })
 
 st.divider()
 
-# --- ANALİZ VE DEV RAPOR PANELİ ---
+# --- ANALİZ VE BALON KUTUCUK PANELİ ---
 col_left, col_right = st.columns([1, 1.2])
 
 with col_left:
+    # Vaka veri girişi alanı balon kutucuk içine alındı
+    st.markdown("<div class='upload-bubble'>", unsafe_allow_html=True)
     st.subheader("📁 Vaka Veri Girişi")
     uploaded_file = st.file_uploader("Dijital Patoloji / MR Kesiti Yükle", type=["jpg", "png", "jpeg"])
-    st.markdown("---")
     metastazlar = st.multiselect("Metastaz Saptanan Alanlar:", ["Beyin", "Karaciğer", "Kemik", "Sürrenal", "Lenf Nodları"])
     
     evre_sonuc = "EVRE 4 (METASTATİK)" if metastazlar else "EVRE 1-3 (LOKALİZE)"
     st.info(f"Klinik Evreleme Tespiti: {evre_sonuc}")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with col_right:
     if uploaded_file:
@@ -117,32 +124,19 @@ with col_right:
             secilen_tur = random.choice(["Adenokarsinom", "Skuamöz Hücreli Karsinom", "Büyük Hücreli Karsinom"])
             risk = random.uniform(96.2, 99.8)
             
-            # --- DEV ANALİZ ÇIKTISI (EKRANDA GÖRÜLECEK) ---
             st.error(f"### 🚩 KRİTİK ANALİZ SONUCU: {secilen_tur.upper()}")
             
             full_analiz_metni = f"""
             #### 🧪 TIBBİ ANALİZ VE 3T RAPOR DETAYLARI
             
-            *1. TANI (DIAGNOSIS):*
-            Sistemimiz, yüklenen doku örneğinde *%{risk:.1f}* olasılıkla *{secilen_tur}* tespit etmiştir. Mikroskobik incelemede nükleer membran düzensizliği, belirgin makronükleoller ve yüksek nükleer/sitoplazmik oran saptanmıştır. Bu morfoloji, agresif bir malignite sürecini desteklemektedir.
-            
-            *2. TEDAVİ (THERAPY - 3T):*
-            * *Kişiselleştirilmiş İlaç:* {evre_sonuc} durumu göz önüne alındığında, NGS (Next Generation Sequencing) yapılarak EGFR, ALK ve KRAS mutasyonları sorgulanmalıdır. 
-            * *İlaç Önerisi:* Eğer PD-L1 ekspresyonu %50 üzerindeyse ilk seçenek *Pembrolizumab* olmalıdır. EGFR(+) vakalarda *Osimertinib* 80mg/gün protokolü önerilir.
-            * *Kemoterapi:* Skuamöz dışı vakalarda Sisplatin + Pemetreksed kombinasyonu standarttır.
-            
-            *3. TAKİP (TRACKING):*
-            * Hastanın {', '.join(metastazlar) if metastazlar else 'primer odağı'} her 8-12 haftada bir Kontrastlı Toraks BT ve PET-CT ile izlenmelidir.
-            * Kanda CEA ve CYFRA 21-1 gibi tümör belirteçleri aylık olarak takip edilmelidir.
-            
-            *4. PROGNOZ:* Erken müdahale ve hedefe yönelik ajanların kullanımıyla sağkalım süresinin %40 oranında artırılması hedeflenmektedir.
+            *1. TANI:* %{risk:.1f} olasılıkla *{secilen_tur}*.
+            *2. TEDAVİ:* {evre_sonuc} protokolüne göre NGS mutasyon sorgusu ve hedefe yönelik ajanlar.
+            *3. TAKİP:* 8-12 haftalık periyotlarla PET-CT ve kanda CEA takibi.
             """
             st.markdown(full_analiz_metni)
             
-            # --- RAPOR İNDİRME (EKRANDAKİ HER ŞEY VE FAZLASI) ---
-            rapor_dosya = f"MATHRIX AI ONKOLOJI RESMI RAPORU\n" + "-"*40 + f"\nRAPOR ID: MX-{random.randint(1000,9999)}\nTARIH: {time.strftime('%d/%m/%Y')}\n\n[TANI]\nTur: {secilen_tur}\nGuven: %{risk:.1f}\nEvre: {evre_sonuc}\nMetastazlar: {metastazlar}\n\n[DETAYLI ANALIZ]\n{full_analiz_metni}"
-            
-            st.download_button("📩 TÜM ANALİZİ VE 3T DOSYASINI İNDİR", rapor_dosya, f"MathRix_Rapor_{secilen_tur}.txt")
+            rapor_dosya = f"TANI: {secilen_tur}\nGUVEN: %{risk:.1f}\nEVRE: {evre_sonuc}"
+            st.download_button("📩 TÜM ANALİZİ İNDİR", rapor_dosya, f"MathRix_Rapor.txt")
     else:
         st.info("Analiz başlatmak için lütfen görsel yükleyiniz.")
 
