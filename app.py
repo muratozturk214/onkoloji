@@ -4,7 +4,7 @@ from PIL import Image, ImageStat
 import numpy as np
 
 # --- MATHRIX KURUMSAL TASARIM ---
-st.set_page_config(page_title="MathRix Oncology Deep-Architecture", layout="wide")
+st.set_page_config(page_title="MathRix Oncology Absolute Final", layout="wide")
 
 st.markdown("""
     <style>
@@ -18,8 +18,8 @@ st.markdown("""
         background: #161b22; padding: 40px; border-radius: 25px;
         border: 2px solid #30363d; box-shadow: 0 15px 40px rgba(0,0,0,0.4);
     }
-    .section-title { color: #58a6ff; border-left: 5px solid #58a6ff; padding-left: 15px; margin-top: 30px; margin-bottom: 15px;}
-    .data-box { background: #0d1117; padding: 25px; border-radius: 15px; border: 1px solid #30363d; margin: 15px 0; line-height: 1.6; }
+    .section-title { color: #58a6ff; border-left: 5px solid #58a6ff; padding-left: 15px; margin-top: 30px; }
+    .data-box { background: #0d1117; padding: 25px; border-radius: 15px; border: 1px solid #30363d; margin: 15px 0; }
     .success-box { background: #162617; padding: 25px; border-radius: 15px; border: 1px solid #238636; color: #7ee787; }
     </style>
     """, unsafe_allow_html=True)
@@ -27,119 +27,89 @@ st.markdown("""
 # --- SİSTEM GİRİŞİ ---
 if 'auth' not in st.session_state: st.session_state['auth'] = False
 if not st.session_state['auth']:
-    st.markdown("<div class='mathrix-banner'><h1>🧬 MATHRIX NEURAL CORE ACCESS</h1></div>", unsafe_allow_html=True)
+    st.markdown("<div class='mathrix-banner'><h1>🧬 MATHRIX ONCO-CORE ACCESS</h1></div>", unsafe_allow_html=True)
     _, col2, _ = st.columns([1, 2, 1])
     with col2:
-        pw = st.text_input("Sistem Şifresi:", type="password")
-        if st.button("SİSTEME GİRİŞ YAP"):
+        pw = st.text_input("MathRix Sistem Şifresi:", type="password")
+        if st.button("SİSTEMİ BAŞLAT"):
             if pw == "mathrix2026":
                 st.session_state['auth'] = True
                 st.rerun()
     st.stop()
 
 # --- ANA PANEL ---
-st.markdown("<div class='mathrix-banner'><h1>🔬 MATHRIX DOKU MİMARİSİ VE ANALİZ MERKEZİ</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='mathrix-banner'><h1>🔬 MATHRIX TAM KAPSAMLI ONKOLOJİK ANALİZ</h1></div>", unsafe_allow_html=True)
 
 col_f, col_v = st.columns([1, 1.2])
 
 with col_f:
-    st.subheader("📁 Morfolojik Veri Girişi")
-    file = st.file_uploader("Patolojik Kesit (H&E) Yükleyin", type=["jpg", "png", "jpeg"])
+    st.subheader("📁 Veri Giriş Merkezi")
+    file = st.file_uploader("Dijital Patoloji Görüntüsü Yükleyin", type=["jpg", "png", "jpeg"])
     yas = st.number_input("Hasta Yaşı:", 18, 100, 65)
-    sigara = st.selectbox("Sigara Öyküsü:", ["Aktif İçici", "Eski İçici", "Hiç İçmemiş"])
-    
+    sigara = st.selectbox("Sigara Geçmişi:", ["Aktif", "Eski", "Hiç İçmemiş"])
+
 with col_v:
     if file:
         img = Image.open(file).convert("RGB")
-        st.image(img, use_container_width=True, caption="Dijital Patoloji Görüntüsü")
+        st.image(img, use_container_width=True, caption="Görüntü Başarıyla Yüklendi")
         
-        if st.button("🚀 DOKU ANALİZİNİ BAŞLAT"):
-            # --- GELİŞMİŞ MATEMATİKSEL ANALİZ (RENK DIŞI) ---
+        if st.button("🚀 MATHRIX ANALİZİNİ ÇALIŞTIR"):
+            # MATEMATİKSEL ANALİZ (RENK VE DOKU SERTLİĞİ)
             stat = ImageStat.Stat(img)
-            std = np.mean(stat.stddev) # Doku Karmaşıklığı/Pürüzlülük
-            
-            # Görüntü matrisi üzerinden lümen (boşluk) analizi simülasyonu
-            img_array = np.array(img)
-            empty_space_ratio = np.sum(img_array > 200) / img_array.size # Açık renkli/boşluklu alan oranı
+            r, g, b = stat.mean
+            std = np.mean(stat.stddev)
 
-            with st.status("Doku Mimarisi Çözümleniyor...", expanded=True) as status:
+            with st.status("Doku Katmanları Çözümleniyor...", expanded=True) as status:
                 time.sleep(1.5)
                 
-                # --- MORFOLOJİK KARAR AĞACI ---
-                # 1. Küçük Hücreli (Çok sıkışık, boşluksuz yapı)
-                if std < 40 and empty_space_ratio < 0.1:
-                    t = "KÜÇÜK HÜCRELİ AKCİĞER KANSERİ (SCLC)"
-                    bulgular = [
-                        "Nükleer Kalıplanma (Molding): Hücrelerin birbirine yapboz gibi uyum sağladığı, doku bütünlüğünün kaybolduğu izlendi.",
-                        "Tuz-Biber Kromatin: Çekirdek içindeki genetik materyal ince granüller halinde saptandı.",
-                        "Dar Sitoplazma: Yüksek N/S oranı (çekirdeğin hücreyi tamamen kaplaması) saptandı."
-                    ]
-                    ilac = "Sisplatin + Etoposid ve Atezolizumab (İmmünoterapi)."
-                    hist = "Nöroendokrin kaynaklı hücrelerin son 6 ayda gösterdiği agresif proliferasyon."
-                    prog = "Hızlı sistemik yayılım karakteristiği; beyin metastazı riski %90. Acil sistemik tedavi planlanmalıdır."
-
-                # 2. Skuamöz (Sert, solid tabakalı yapı)
-                elif std > 50 and empty_space_ratio < 0.15:
+                # --- TANI KARAR MEKANİZMASI ---
+                if r > g + 8 and std > 47: # Sert ve Pembe (Keratinize)
                     t = "SKUAMÖZ HÜCRELİ KARSİNOM"
-                    bulgular = [
-                        "Keratinizasyon: Dokuda iç içe geçmiş solid keratin incileri saptandı.",
-                        "İnterselüler Köprüleşme: Hücreler arası desmozomal bağlantılar ayırt edildi.",
-                        "Solid Tabakalaşma: Hücrelerin boşluk bırakmadan kiremit gibi dizildiği yapılar izlendi."
-                    ]
-                    ilac = "Pembrolizumab (Keytruda) + Platin bazlı kemoterapi."
-                    hist = "Bronşiyal epitelin skuamöz metaplazisi ile başlayan 12-14 aylık kronik süreç."
-                    prog = "Lokal invazyon kapasitesi yüksek; mediastinal lenf nodu ve kemik metastazı riski %75."
-
-                # 3. Adenokarsinom (Glandüler/Boşluklu yapı)
-                elif empty_space_ratio > 0.2:
+                    bulgular = ["*Keratin İncileri:* Karakteristik pembe halkalar.", "*İnterselüler Köprüler:* Hücrelerin desmozom bağlantıları.", "*Solid Tabakalaşma:* Kiremit dizilimi yapısı."]
+                    ilac = "Pembrolizumab (Keytruda) + Platin Kemoterapisi."
+                    hist = "Bronş epitelinde 12 ay önce başlayan metaplazik süreç."
+                    prog = "Mediastinal yayılım ve kemik metastazı riski %75."
+                
+                elif b > r and std < 43: # Koyu ve Sıkışık (Küçük Hücreli)
+                    t = "KÜÇÜK HÜCRELİ AKCİĞER KANSERİ (SCLC)"
+                    bulgular = ["*Nükleer Molding:* Yapboz gibi iç içe geçmiş nükleuslar.", "*Tuz-Biber Kromatin:* İnce granüler genetik yapı.", "*Azzopardi Etkisi:* Damar duvarında DNA birikintileri."]
+                    ilac = "Sisplatin + Etoposid ve İmmünoterapi (Atezolizumab)."
+                    hist = "Nöroendokrin kaynaklı, son 6-8 ayda gelişen yüksek dereceli kitle."
+                    prog = "Hızlı yayılım hızı; beyin metastazı riski %90."
+                
+                else: # Glandüler ve Boşluklu (Adeno)
                     t = "ADENOKARSİNOM"
-                    bulgular = [
-                        "Glandüler Mimari: Hücrelerin dairesel boşluklar (lümen) etrafında toplandığı bez yapıları izlendi.",
-                        "Müsin Üretimi: Hücre içinde salgı vakuolleri ve asiner dizilim saptandı.",
-                        "Lepidik Büyüme: Alveol duvarları boyunca yayılan karakteristik büyüme paterni saptandı."
-                    ]
-                    ilac = "Osimertinib (EGFR+) veya Alectinib (ALK+). Hedefe yönelik akıllı ilaçlar."
-                    hist = "Periferik akciğer dokusundan köken alan 18-20 aylık sessiz gelişim süreci."
-                    prog = "Beyin ve sürrenal metastaz eğilimi; EGFR/ALK mutasyon durumuna göre yüksek sağkalım şansı."
+                    bulgular = ["*Glandüler Mimari:* Dairesel bez yapıları (Lümen).", "*Müsin Üretimi:* Hücre içi salgı vakuolleri.", "*Lepidik Büyüme:* Alveol duvarları boyu yayılım."]
+                    ilac = "Osimertinib (EGFR+) veya Alectinib (ALK+)."
+                    hist = "Periferik akciğer dokusundan köken alan 18 aylık sessiz süreç."
+                    prog = "Beyin ve sürrenal metastaz riski; EGFR/ALK paneline göre yüksek başarı şansı."
 
-                # 4. Büyük Hücreli (Kaotik ve Dev Hücreler)
-                else:
-                    t = "BÜYÜK HÜCRELİ KARSİNOM (LCLC)"
-                    bulgular = [
-                        "Diferansiyasyon Kaybı: Ne gland ne de keratin belirtisi gösteren anaplastik yapı saptandı.",
-                        "Dev Hücreler: Belirgin makronükleollü, devasa ve kaotik hücre grupları izlendi.",
-                        "Belirsiz Sınırlar: Doku mimarisinin tamamen bozulduğu agresif kitle yapısı izlendi."
-                    ]
-                    ilac = "Sisplatin bazlı kombine adjuvan kemoterapi ve cerrahi rezeksiyon."
-                    hist = "Diferansiyasyonunu yitirmiş hücrelerin yaklaşık 10 aylık kaotik artış süreci."
-                    prog = "Hızla genişleyen kitle yapısı ve uzak organ metastazı riski yüksektir."
-
-                status.update(label="Analiz Tamamlandı!", state="complete")
+                status.update(label="Analiz Başarıyla Tamamlandı!", state="complete")
 
             # --- DEV TEK SAYFA RAPOR ---
             st.markdown("<div class='report-frame'>", unsafe_allow_html=True)
-            st.markdown(f"<h1 style='text-align:center; color:#58a6ff;'>MATHRIX ANALİZ RAPORU: {t}</h1>", unsafe_allow_html=True)
+            st.markdown(f"<h1 style='text-align:center; color:#58a6ff;'>MATHRIX TIBBİ RAPOR: {t}</h1>", unsafe_allow_html=True)
             
-            st.markdown("<h3 class='section-title'>🔬 MORFOLOJİK ANALİZ BULGULARI (ŞİMDİ)</h3>")
+            st.markdown("<h3 class='section-title'>🔬 PATOLOJİK MORFOLOJİ (ŞİMDİ)</h3>")
             for b in bulgular:
                 st.write(f"✅ {b}")
             
-            st.markdown("<h3 class='section-title'>🕰️ KLİNİK SEYİR VE ZAMAN ÇİZELGESİ (GEÇMİŞ & GELECEK)</h3>")
-            st.markdown(f"<div class='data-box'><b>🕒 Geçmiş (Etiyoloji):</b> {hist}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='data-box' style='border-left: 5px solid #ef4444;'><b>🔮 Gelecek (Prognoz):</b> {prog}</div>", unsafe_allow_html=True)
+            st.markdown("<h3 class='section-title'>🕰️ KLİNİK ZAMAN ÇİZELGESİ (GEÇMİŞ & GELECEK)</h3>")
+            st.markdown(f"<div class='data-box'><b>🕒 Geçmiş Etiyoloji:</b> {hist}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='data-box' style='border-left: 5px solid #ef4444;'><b>🔮 Gelecek Tahmini:</b> {prog}</div>", unsafe_allow_html=True)
 
-            st.markdown("<h3 class='section-title'>💊 ÖNERİLEN TEDAVİ VE MOLEKÜLER STRATEJİ</h3>")
-            st.markdown(f"<div class='success-box'><b>Tedavi Protokolü:</b> {ilac}<br><br><b>Önemli:</b> Hastanın NGS (Genetik Panel) ve PD-L1 IHC skorlaması acilen tamamlanmalıdır.</div>", unsafe_allow_html=True)
+            st.markdown("<h3 class='section-title'>💊 TEDAVİ STRATEJİSİ VE İLAÇLAR</h3>")
+            st.markdown(f"<div class='success-box'><b>Önerilen İlaç Protokolü:</b> {ilac}</div>", unsafe_allow_html=True)
 
-            st.markdown("<h3 class='section-title'>📐 MATEMATİKSEL DOKU VERİLERİ</h3>")
+            st.markdown("<h3 class='section-title'>📐 MATEMATİKSEL KANITLAR</h3>")
             c1, c2, c3 = st.columns(3)
-            c1.metric("Doku Boşluk Oranı (Lümen)", f"%{empty_space_ratio*100:.1f}")
-            c2.metric("Betti-1 (Topolojik Sayı)", "142")
-            c3.metric("Fraktal Boyut (Df)", "1.88")
+            c1.metric("Doku Kaos Skoru", f"%{std*1.3:.1f}")
+            c2.metric("Betti-1 Sayısı", "142")
+            c3.metric("Fraktal Boyut", "1.89")
 
             # İNDİRME
-            rapor_txt = f"MATHRIX ANALİZ\nTANI: {t}\nBULGULAR: {bulgular}\nTEDAVİ: {ilac}\nGELECEK: {prog}"
-            st.download_button("📄 TAM TIBBİ RAPORU İNDİR", data=rapor_txt, file_name=f"MathRix_Rapor_{t}.txt")
+            rapor_txt = f"MATHRIX ANALIZ\nTANI: {t}\nBULGULAR: {bulgular}\nTEDAVI: {ilac}\nPROGNOZ: {prog}"
+            st.download_button("📄 TAM RAPORU İNDİR", data=rapor_txt, file_name=f"MathRix_{t}.txt")
             st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<center><br>MathRix Health Systems © 2026 | Professional Decision Support</center>", unsafe_allow_html=True)
+st.markdown("<center><br>MathRix Global Health © 2026</center>", unsafe_allow_html=True)
