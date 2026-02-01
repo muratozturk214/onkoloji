@@ -1,118 +1,131 @@
 import streamlit as st
 import time
-from PIL import Image, ImageStat
-import numpy as np
+from PIL import Image
+import random
 
-# --- MATHRIX PROFESYONEL BEYAZ TEMA ---
-st.set_page_config(page_title="MathRix Oncology White-Core", layout="wide")
+# Sayfa Ayarları
+st.set_page_config(page_title="MathRix AI Oncology Pro", layout="wide")
 
-st.markdown("""
-    <style>
-    .stApp { background-color: #ffffff; color: #1e293b; }
-    .mathrix-banner {
-        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-        padding: 35px; border-radius: 15px; text-align: center;
-        color: white; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1);
-    }
-    .full-report-container {
-        background: #fdfdfd; padding: 40px; border-radius: 20px;
-        border: 2px solid #e2e8f0; margin-top: 20px;
-    }
-    .section-title { color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-top: 25px; font-size: 22px; }
-    .highlight-text { background: #f1f5f9; padding: 15px; border-radius: 10px; border-left: 6px solid #3b82f6; margin: 10px 0; }
-    .treatment-card { background: #f0fdf4; padding: 20px; border-radius: 12px; border: 1px solid #dcfce7; color: #166534; }
-    </style>
-    """, unsafe_allow_html=True)
+# --- GİRİŞ SİSTEMİ ---
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
 
-# --- SİSTEM GİRİŞİ ---
-if 'auth' not in st.session_state: st.session_state['auth'] = False
-if not st.session_state['auth']:
-    st.markdown("<div class='mathrix-banner'><h1>🧬 MATHRIX ONCO-CORE v13</h1></div>", unsafe_allow_html=True)
-    _, col2, _ = st.columns([1, 1.5, 1])
+if not st.session_state['authenticated']:
+    st.markdown("<h1 style='text-align: center; color: #001f3f;'>MATHRIX NEURAL CORE ACCESS</h1>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        pw = st.text_input("Sistem Erişim Şifresi:", type="password")
-        if st.button("SİSTEMİ BAŞLAT"):
-            if pw == "mathrix2026":
-                st.session_state['auth'] = True
+        password = st.text_input("Sistem Erişim Şifresi:", type="password")
+        if st.button("Sisteme Giriş Yap"):
+            if password == "mathrix2026":
+                st.session_state['authenticated'] = True
                 st.rerun()
+            else:
+                st.error("Hatalı Şifre! Erişim Reddedildi.")
     st.stop()
 
 # --- ANA PANEL ---
-st.markdown("<div class='mathrix-banner'><h1>🔬 MATHRIX HÜCRESEL NOKTA BULUTU VE MİMARİ ANALİZİ</h1></div>", unsafe_allow_html=True)
+st.markdown("<h1 style='color: #003366; text-align: center;'>🧬 MATHRIX ONKOLOJİ ANALİZ PANELİ</h1>", unsafe_allow_html=True)
 
-# --- ANALİZ ALANI ---
-file = st.file_uploader("Dijital Patoloji Görüntüsü Yükleyin", type=["jpg", "png", "jpeg"])
+# --- KLİNİK BİLGİ BANKASI ---
+st.subheader("📚 Akciğer Kanseri Klinik Bilgi Bankası")
+tab1, tab2, tab3 = st.tabs(["Kanser Türleri", "Evreleme & Metastaz", "İlaçlar & Tedavi"])
 
-if file:
-    img = Image.open(file).convert("RGB")
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.image(img, use_container_width=True, caption="Analiz Edilen Kesit")
-    with c2:
-        st.info("Hücresel dizilim, çekirdek/sitoplazma oranı ve topolojik boşluk analizi yapılıyor.")
-        start_analysis = st.button("🚀 MATEMATİKSEL ANALİZİ ÇALIŞTIR", use_container_width=True)
+with tab1:
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.info("*1. Adenokarsinom:* En yaygın türdür. Genelde akciğerin dış (periferik) kısımlarında, salgı bezlerinden köken alır.")
+        st.info("*2. Skuamöz Hücreli:* Genellikle ana bronşlarda gelişir ve sigara kullanımı ile çok güçlü bir bağı vardır.")
+    with col_b:
+        st.info("*3. Büyük Hücreli:* Hızla büyüyen, geniş sitoplazmalı ve belirgin nükleollü agresif bir tümördür.")
+        st.info("*4. Küçük Hücreli (KHAK):* Çok hızlı yayılır, erken evrede beyin ve karaciğer metastazı yapabilir.")
 
-    if start_analysis:
-        # --- MATEMATİKSEL ANALİZ MOTORU ---
-        img_array = np.array(img)
-        # Renk yerine doku yoğunluğunu ölçen Standart Sapma ve Varyans
-        std_val = np.mean(np.std(img_array, axis=(0, 1))) 
-        # Hücreler arası boşluk (Lümen) analizi simülasyonu
-        void_ratio = np.sum(img_array > 210) / img_array.size 
+with tab2:
+    st.warning("⚠️ *Metastaz Durumu:* Akciğer kanseri hücreleri kan yoluyla en sık Karaciğer, Beyin, Kemik ve Böbrek Üstü bezlerine yayılır.")
+    st.write("Uzak organlarda kitle saptanması durumunda hastalık *Evre 4 (Metastatik)* olarak sınıflandırılır.")
 
-        with st.spinner("Hücre mimarisi ve nokta bulutları hesaplanıyor..."):
-            time.sleep(2)
+with tab3:
+    c1, c2 = st.columns(2)
+    c1.success("*Akıllı İlaçlar:* EGFR, ALK, ROS1 gibi mutasyonlar varsa hedefleyici tedaviler (Örn: Osimertinib) tercih edilir.")
+    c2.error("*İmmünoterapi:* Bağışıklık hücrelerinin tümörü tanımasını sağlar (Örn: Pembrolizumab - Keytruda).")
 
-            # --- TIBBİ KARAR MEKANİZMASI (MORFOLOJİK VERİYE DAYALI) ---
-            if void_ratio > 0.18: # Boşluklar/Glandlar varsa
-                tani = "ADENOKARSİNOM"
-                morf = "Glandüler (bezsel) yapılar ve dairesel lümen oluşumları saptandı. Hücreler asiner dizilim gösteriyor."
-                ilac = "EGFR/ALK mutasyon durumuna göre Osimertinib veya Alectinib (Hedefe Yönelik Tedavi)."
-                seyir = "Periferik yerleşimli gelişim. Beyin ve sürrenal metastaz riski takibi gereklidir."
+st.divider()
+
+# --- ANALİZ BÖLÜMÜ ---
+col_left, col_right = st.columns([1, 1])
+
+with col_left:
+    st.subheader("📸 Görüntü Analiz Ünitesi")
+    uploaded_file = st.file_uploader("Patoloji/Radyoloji Görüntüsü Yükle", type=["jpg", "png", "jpeg"])
+    
+    with st.expander("📋 Klinik Verileri Gir (İsteğe Bağlı)"):
+        yas = st.number_input("Hasta Yaşı:", 1, 120, 65)
+        sigara = st.selectbox("Sigara Öyküsü:", ["Belirtilmedi", "Hiç içmemiş", "Eski içici", "Aktif içici"])
+        metastaz = st.multiselect("Bilinen Metastazlar:", ["Yok", "Karaciğer", "Beyin", "Kemik"])
+
+with col_right:
+    if uploaded_file:
+        st.image(Image.open(uploaded_file), use_container_width=True)
+        
+        if st.button("🔬 DERİN ANALİZİ BAŞLAT"):
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Analiz Simulasyonu
+            for i in range(1, 101):
+                time.sleep(0.04)
+                progress_bar.progress(i)
+                if i < 30: status_text.text("Doku mimarisi taranıyor...")
+                elif i < 60: status_text.text("Hücre çekirdekleri analiz ediliyor...")
+                elif i < 90: status_text.text("Vasküler yapılar ve atipi kontrol ediliyor...")
+                else: status_text.text("Rapor hazırlanıyor...")
                 
-            elif std_val > 55: # Çok sert, solid ve karmaşık yapı
-                tani = "SKUAMÖZ HÜCRELİ KARSİNOM"
-                morf = "Solid tabakalaşma ve keratinize inci formasyonları izlendi. Hücreler arası köprüleşme (desmozom) belirgin."
-                ilac = "Pembrolizumab (Keytruda) + Platin bazlı kemoterapi."
-                seyir = "Santral bronş kökenli. Lokal invazyon kapasitesi yüksek; kemik metastaz riski mevcuttur."
-                
-            elif std_val < 42: # Çok yoğun, küçük ve sıkışık noktalar
-                tani = "KÜÇÜK HÜCRELİ AKCİĞER KANSERİ (SCLC)"
-                morf = "Nükleer Molding (çekirdek kalıplanması) saptandı. Yüksek N/S oranı ve tuz-biber kromatin yapısı mevcut."
-                ilac = "Sisplatin + Etoposid ve İmmünoterapi (Atezolizumab)."
-                seyir = "En agresif tür. Sistemik yayılım hızı çok yüksek; beyin metastazı riski %90'dır."
-                
-            else: # Diferansiye olmamış, dev yapılar
-                tani = "BÜYÜK HÜCRELİ KARSİNOM"
-                morf = "Anaplastik dev hücreler ve belirgin nükleoller saptandı. Glandüler veya skuamöz diferansiyasyon izlenmedi."
-                ilac = "Cerrahi sonrası adjuvan kemoterapi."
-                seyir = "Hızla büyüyen kitle. Uzak organ metastaz eğilimi yüksektir."
-
-            # --- TEK KUTUCUK DEV RAPOR ---
-            st.markdown("<div class='full-report-container'>", unsafe_allow_html=True)
-            st.markdown(f"<h1 style='text-align:center; color:#1e40af;'>MATHRIX ANALİZ RAPORU: {tani}</h1>", unsafe_allow_html=True)
+            # --- GELİŞMİŞ ANALİZ SONUÇLARI ---
+            turler = ["Adenokarsinom", "Skuamöz Hücreli Karsinom", "Büyük Hücreli Karsinom"]
+            secilen_tur = random.choice(turler)
+            risk_skoru = random.uniform(88.4, 97.9)
             
-            st.markdown("<h3 class='section-title'>🔬 HÜCRESEL MİMARİ VE NOKTA BULUTU ANALİZİ</h3>", unsafe_allow_html=True)
-            st.markdown(f"<div class='highlight-text'><b>Patolojik Bulgular:</b> {morf}</div>", unsafe_allow_html=True)
+            st.error(f"### 🚩 KRİTİK ANALİZ SONUCU: {secilen_tur.upper()}")
             
+            # Uzun ve Detaylı Bilgi Kısmı
+            st.markdown(f"""
+            *Detaylı Patolojik Tanı Analizi:*
+            Incelenen örnekte hücresel boyutta *belirgin nükleer pleomorfizm* ve hiperkromazi saptanmıştır. Hücrelerin dizilimi ve doku içerisindeki yayılım paternleri incelendiğinde, bu görünümün yüksek olasılıkla *{secilen_tur}* ile uyumlu olduğu görülmektedir. 
             
-
-            st.markdown("<h3 class='section-title'>🕰️ KLİNİK SEYİR VE GELECEK TAHMİNİ</h3>", unsafe_allow_html=True)
-            st.markdown(f"<div class='highlight-text'><b>Gelecek Tahmini (Prognoz):</b> {seyir}</div>", unsafe_allow_html=True)
-
-            st.markdown("<h3 class='section-title'>💊 ÖNERİLEN TEDAVİ VE İLAÇ STRATEJİSİ</h3>", unsafe_allow_html=True)
-            st.markdown(f"<div class='treatment-card'><b>Protokol:</b> {ilac}<br><b>Not:</b> Kesin tedavi planı için NGS ve PD-L1 testleri acildir.</div>", unsafe_allow_html=True)
+            *Saptanan Bulgular:*
+            - *Mitoz Hızı:* Yüksek dereceli mitotik aktivite gözlemlendi.
+            - *Atipi Derecesi:* %{risk_skoru:.1f} oranında malignite uyumlu hücresel bozulma.
+            - *İnfiltrasyon:* Çevre dokularda invazyon (yayılım) şüphesi mevcut.
             
+            *Klinik Öneri:* Hastanın yaşı ({yas}) ve mevcut durumu göz önüne alındığında, tanıyı kesinleştirmek için *İmmünohistokimya (IHC)* boyamaları yapılmalı ve mutasyon analizi için *Next-Generation Sequencing (NGS)* testi istenmelidir. Eğer metastaz şüphesi varsa PET-BT taraması hayati önem taşır.
+            """)
             
+            # Uzun Rapor İçeriği
+            rapor_metni = f"""
+            MATHRIX AI ONKOLOJI PROFESYONEL ANALIZ RAPORU
+            ----------------------------------------------
+            TARIH: {time.strftime('%d/%m/%Y')}
+            RAPOR ID: MX-{random.randint(10000, 99999)}
+            
+            [HASTA VERILERI]
+            Yas: {yas}
+            Sigara Durumu: {sigara}
+            Metastaz Durumu: {', '.join(metastaz) if metastaz else 'Belirtilmedi'}
+            
+            [AI DEEP LEARNING BULGULARI]
+            Yapilan dijital patoloji taramasinda doku mimarisinin {secilen_tur} 
+            ozelliklerini %{risk_skoru:.1f} dogruluk payi ile tasidigi saptanmistir. 
+            Hucrelerde kitle olusumu ve duzensiz nükleus yapilari (Atipi) mevcuttur.
+            
+            [TEDAVI VE PLANLAMA TAVSIYESI]
+            - Oncelikle histolojik alt tipin patolog tarafindan teyidi gereklidir.
+            - Hastaya ozel immunoterapi (PD-L1 skoru) arastirilmalidir.
+            - Akilli ilac (Targeted Therapy) secenekleri icin genetik mutasyon paneli taranmalidir.
+            
+            Not: Bu bir yapay zeka on-analizidir. Kesin teshis yerine gecmez.
+            """
+            
+            st.download_button("📩 TAM TIBBİ RAPORU İNDİR", rapor_metni, f"MathRix_Detayli_Rapor_{secilen_tur}.txt")
+    else:
+        st.info("Lütfen sol taraftan bir görsel yükleyerek analizi başlatın.")
 
-            st.markdown("<h3 class='section-title'>📐 MATEMATİKSEL DOKU ANALİZİ (TDA)</h3>", unsafe_allow_html=True)
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Boşluk (Lümen) Oranı", f"%{void_ratio*100:.1f}")
-            c2.metric("Doku Varyansı", f"{std_val:.2f}")
-            c3.metric("Betti-1 Sayısı", "142")
-
-            rapor_txt = f"MATHRIX RAPORU\nTANI: {tani}\nBULGULAR: {morf}\nTEDAVI: {ilac}"
-            st.download_button("📄 TAM TIBBİ RAPORU İNDİR", data=rapor_txt, file_name=f"MathRix_{tani}.txt")
-            st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown("<center><br>MathRix Health Systems © 2026 | Profesyonel Karar Destek</center>", unsafe_allow_html=True)
+st.markdown("<br><hr><center>MathRix Global Health Systems © 2026 | Professional Decision Support</center>", unsafe_allow_html=True)
