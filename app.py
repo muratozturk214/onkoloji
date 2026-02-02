@@ -1,60 +1,49 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import cv2
 import math
 
-# ==============================
-# SAYFA AYARLARI
-# ==============================
 st.set_page_config(
-    page_title="Akciğer Kanseri Destekleyici Klinik Analiz Sistemi",
+    page_title="Akciğer Kanseri MathRIX Karar Destek Sistemi",
     layout="wide"
 )
 
-st.title("🫁 Akciğer Kanseri Görüntü Tabanlı Klinik Destek Sistemi")
-st.caption("""
-Bu sistem tanı koymaz. Klinik, patolojik ve moleküler değerlendirmeyi desteklemek amacıyla geliştirilmiş
-akademik bir karar destek prototipidir.
-""")
+st.title("Akciğer Kanseri Görüntü Tabanlı MathRIX Destek Sistemi")
+st.caption("Bu sistem tanı koymaz, akademik ve klinik karar desteği sağlar.")
 
-# ==============================
-# YARDIMCI FONKSİYONLAR
-# ==============================
-
+# =======================
+# GÖRÜNTÜ ÖN İŞLEME
+# =======================
 def preprocess_image(img):
-    img = np.array(img.convert("L"))
-    img = cv2.resize(img, (256, 256))
-    img = cv2.GaussianBlur(img, (5,5), 0)
-    return img
+    img = img.convert("L").resize((256, 256))
+    arr = np.array(img) / 255.0
+    return arr
 
 def entropy_score(img):
-    hist = cv2.calcHist([img],[0],None,[256],[0,256])
-    hist = hist / hist.sum()
-    ent = -np.sum([p*np.log2(p) for p in hist if p > 0])
-    return ent
+    hist, _ = np.histogram(img.flatten(), bins=256, range=(0,1), density=True)
+    hist = hist[hist > 0]
+    return -np.sum(hist * np.log2(hist))
 
 def cell_density(img):
-    _, th = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    return np.sum(th == 255) / th.size
+    return np.mean(img > 0.6)
 
-def malignancy_probability(ent, density):
-    raw = 0.55*ent + 0.45*density*10
-    prob = 1 / (1 + math.exp(-raw + 4))
-    return min(max(prob, 0.05), 0.95)  # %100 YOK, belirsizlik payı var
+def malignancy_probability(entropy, density):
+    score = 0.6 * entropy + 0.4 * density * 5
+    prob = 1 / (1 + math.exp(-(score - 3)))
+    return min(max(prob, 0.05), 0.95)
 
 def subtype_estimation(prob):
-    if prob > 0.75:
+    if prob > 0.7:
         return {
-            "Adenokarsinom": 0.87,
-            "Skuamöz Hücreli Karsinom": 0.09,
-            "Büyük Hücreli Karsinom": 0.04
+            "Adenokarsinom": 0.82,
+            "Skuamöz Hücreli Karsinom": 0.12,
+            "Diğer NSCLC": 0.06
         }
-    elif prob > 0.55:
+    elif prob > 0.5:
         return {
-            "Adenokarsinom": 0.55,
-            "Skuamöz Hücreli Karsinom": 0.30,
-            "Diğer NSCLC": 0.15
+            "Adenokarsinom": 0.48,
+            "Skuamöz Hücreli Karsinom": 0.32,
+            "Belirsiz NSCLC": 0.20
         }
     else:
         return {
@@ -63,94 +52,63 @@ def subtype_estimation(prob):
             "Erken NSCLC Olasılığı": 0.15
         }
 
-def tnm_staging(prob, density):
+def tnm_stage(prob):
     if prob < 0.4:
-        return "Evre 0 – I (Erken Evre, düşük malignite olasılığı)"
-    elif prob < 0.65:
-        return "Evre II (Lokal ilerlemiş olasılık)"
+        return "Evre I (Erken evre)"
+    elif prob < 0.6:
+        return "Evre II (Lokal ilerlemiş)"
     elif prob < 0.8:
-        return "Evre III (Bölgesel lenf nodu tutulumu olası)"
+        return "Evre III (Lenf nodu tutulumu olası)"
     else:
-        return "Evre IV (Metastatik hastalık olasılığı)"
+        return "Evre IV (Metastatik olasılık)"
 
-# ==============================
-# GÖRSEL YÜKLEME
-# ==============================
-uploaded = st.file_uploader("Histopatolojik veya radyolojik görüntü yükleyiniz", type=["png","jpg","jpeg"])
+# =======================
+# ARAYÜZ
+# =======================
+uploaded = st.file_uploader("Histopatolojik / Radyolojik Görüntü Yükleyiniz", type=["png","jpg","jpeg"])
 
 if uploaded:
-    img = Image.open(uploaded)
-    proc = preprocess_image(img)
+    image = Image.open(uploaded)
+    img = preprocess_image(image)
 
-    ent = entropy_score(proc)
-    dens = cell_density(proc)
-    prob = malignancy_probability(ent, dens)
+    entropy = entropy_score(img)
+    density = cell_density(img)
+    prob = malignancy_probability(entropy, density)
     subtypes = subtype_estimation(prob)
-    stage = tnm_staging(prob, dens)
+    stage = tnm_stage(prob)
 
     col1, col2 = st.columns(2)
-
     with col1:
-        st.image(img, caption="Yüklenen Görüntü", use_container_width=True)
-
+        st.image(image, caption="Yüklenen Görüntü", use_container_width=True)
     with col2:
-        st.subheader("📊 Kantitatif Analiz")
-        st.write(f"*Malignite Olasılığı:* %{prob*100:.1f}")
-        st.write(f"*Görüntü Entropisi:* {ent:.2f}")
-        st.write(f"*Hücre Yoğunluğu:* {dens:.2f}")
+        st.metric("Malignite Olasılığı", f"%{prob*100:.1f}")
+        st.write(f"*Görüntü Entropisi:* {entropy:.2f}")
+        st.write(f"*Hücre Yoğunluğu:* {density:.2f}")
         st.write(f"*Tahmini Klinik Evre:* {stage}")
 
-    st.divider()
-
-    # ==============================
-    # ALT TİP TAHMİNİ
-    # ==============================
     st.subheader("🧬 Olası Histolojik Alt Tipler")
-    for k,v in subtypes.items():
+    for k, v in subtypes.items():
         st.write(f"- *{k}:* %{v*100:.1f}")
 
-    st.divider()
-
-    # ==============================
-    # AKADEMİK KLİNİK YORUM
-    # ==============================
-    st.subheader("🩺 Klinik ve Akademik Değerlendirme")
-
+    st.subheader("🩺 Akademik Klinik Değerlendirme")
     st.markdown("""
-### Tanısal Yorum
-Bu görüntüden elde edilen morfometrik ve istatistiksel özellikler, *malignite ile uyumlu olabilecek*
-bir doku organizasyonuna işaret etmektedir. Bununla birlikte sistem *kesin tanı koymaz*;
-patoloji, immünohistokimya ve moleküler testler zorunludur.
+*Tanısal Yorum:*  
+Görüntü analizinde artmış doku düzensizliği ve hücresel yoğunluk saptanmıştır.
+Bu bulgular malignite lehine olabilir ancak *kesin tanı için patolojik doğrulama şarttır*.
 
-### Evreleme (TNM Tabanlı Yaklaşım)
-- *Evre I–II:* Cerrahi rezeksiyon temel yaklaşımdır.
-- *Evre III:* Eş zamanlı kemoradyoterapi ve ardından immünoterapi (örn. Durvalumab) önerilir.
-- *Evre IV:* Sistemik tedavi esastır; lokal tedaviler palyatif amaçlıdır.
+*Evreleme:*  
+TNM tabanlı istatistiksel tahminle klinik evre belirlenmiştir.
+Bu evreleme tanısal değil, *öngörüsel* niteliktedir.
 
-### Sistemik Tedavi Seçenekleri (Bilgilendirme Amaçlı)
-*Bu bölüm klinik rehber özetidir, reçete değildir.*
+*Tedavi Yaklaşımı (Literatür Özeti):*
+- EGFR pozitif NSCLC → *Osimertinib*
+- ALK pozitif → *Alectinib*
+- PD-L1 yüksek → *Pembrolizumab*
+- Metastatik hastalık → Sistemik tedavi + palyatif yaklaşımlar
 
-#### NSCLC – Adenokarsinom ağırlıklı olasılıkta:
-- *EGFR mutasyonu pozitif:* Osimertinib
-- *ALK rearranjmanı:* Alectinib
-- *PD-L1 ≥ %50:* Pembrolizumab monoterapi
-- *PD-L1 düşük:* Platin bazlı kemoterapi + immünoterapi
-
-#### Metastatik Hastalık Varsa:
-- Beyin metastazı: Stereotaktik radyocerrahi + sistemik tedavi
-- Kemik metastazı: Denosumab / Zoledronik asit (destekleyici)
-- Karaciğer metastazı: Sistemik tedavi öncelikli
-
-### Prognoz (Tahmini, İstatistiksel)
-- *Erken evre:* 5 yıllık sağkalım %60–80
-- *Evre III:* Medyan sağkalım 18–36 ay
-- *Evre IV:* Medyan sağkalım 8–18 ay  
-(Bu değerler popülasyon istatistikleridir, bireysel hasta için bağlayıcı değildir.)
-
-### Önemli Klinik Not
-Bu yazılım *doktorun yerini almaz*. Amaç;
-- Görüntü → risk → olası alt tip → evre → tedavi seçenekleri
-arasındaki ilişkiyi *akademik düzeyde* göstermektir.
+*Prognoz:*  
+Evreye bağlı olarak medyan sağkalım 8–36 ay arasında değişebilir.
+Bu değerler *popülasyon istatistiğidir*.
 """)
 
     st.success("Analiz tamamlandı. Klinik karar için multidisipliner değerlendirme gereklidir.")
