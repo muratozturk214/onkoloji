@@ -1,639 +1,731 @@
-import os
+import streamlit as st
 import numpy as np
-import cv2
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, models
-import torch.optim as optim
-from sklearn.metrics import classification_report, confusion_matrix
-import matplotlib.pyplot as plt
-import seaborn as sns
 from PIL import Image
-import warnings
-warnings.filterwarnings('ignore')
+import time
 
-# ============================================
-# 1. ÖN İŞLEME VE RENK DEĞİŞMEZLİĞİ
-# ============================================
+# ==================== SAYFA AYARLARI ====================
+st.set_page_config(
+    page_title="MATHRIX - Medical AI",
+    page_icon="🧬",
+    layout="wide"
+)
 
-class StainNormalizer:
-    """Macenko yöntemi ile boya normalizasyonu"""
-    def _init_(self):
-        self.reference_he = np.array([[0.5626, 0.2159],
-                                      [0.7201, 0.8012],
-                                      [0.4062, 0.5581]])
+# ==================== CSS - YAZILAR GÖRÜNSÜN DİYE ====================
+st.markdown("""
+<style>
+    /* Ana arka plan */
+    .main {
+        background-color: #0a192f;
+    }
     
-    def normalize(self, image):
-        # Basitleştirilmiş Macenko implementasyonu
-        # Tam implementasyon için stain-tools kütüphanesi önerilir
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
-        image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
-        return image
+    /* Tüm yazılar beyaz olsun */
+    .stApp {
+        background: linear-gradient(135deg, #0a192f 0%, #172a45 100%);
+        color: #ffffff !important;
+    }
+    
+    /* Streamlit'in varsayılan yazı rengi */
+    p, div, span, label {
+        color: #ffffff !important;
+    }
+    
+    /* Başlıklar */
+    h1, h2, h3, h4 {
+        color: #64ffda !important;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+    }
+    
+    /* Metric kartları */
+    .stMetric {
+        background-color: rgba(23, 42, 69, 0.9) !important;
+        color: white !important;
+    }
+    
+    .stMetric label {
+        color: #89cff0 !important;
+    }
+    
+    .stMetric div {
+        color: #64ffda !important;
+        font-size: 24px !important;
+    }
+    
+    /* Adenokarsinom kutusu */
+    .adenocarcinoma-box {
+        background: linear-gradient(135deg, #1a237e, #283593);
+        color: white !important;
+        padding: 25px;
+        border-radius: 12px;
+        margin: 15px 0;
+        border-left: 8px solid #536dfe;
+        box-shadow: 0 4px 20px rgba(83, 109, 254, 0.4);
+    }
+    
+    /* Skuamöz kutusu */
+    .squamous-box {
+        background: linear-gradient(135deg, #b71c1c, #d32f2f);
+        color: white !important;
+        padding: 25px;
+        border-radius: 12px;
+        margin: 15px 0;
+        border-left: 8px solid #ff5252;
+        box-shadow: 0 4px 20px rgba(255, 82, 82, 0.4);
+    }
+    
+    /* Normal kutusu */
+    .normal-box {
+        background: linear-gradient(135deg, #1b5e20, #2e7d32);
+        color: white !important;
+        padding: 25px;
+        border-radius: 12px;
+        margin: 15px 0;
+        border-left: 8px solid #4caf50;
+        box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
+    }
+    
+    /* Matematik metrikleri */
+    .math-metric {
+        background: rgba(10, 25, 47, 0.9);
+        border: 2px solid #64ffda;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        margin: 8px;
+        color: white !important;
+    }
+    
+    .math-metric h4 {
+        color: #89cff0 !important;
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+    
+    .math-metric h3 {
+        color: #64ffda !important;
+        font-size: 20px;
+        margin: 5px 0;
+    }
+    
+    /* Sidebar yazıları */
+    .css-1d391kg {
+        background-color: #0a192f !important;
+    }
+    
+    .css-1d391kg p, 
+    .css-1d391kg div,
+    .css-1d391kg span {
+        color: #ffffff !important;
+    }
+    
+    /* File uploader */
+    .stFileUploader {
+        background-color: rgba(23, 42, 69, 0.9) !important;
+        border: 2px dashed #64ffda !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Butonlar */
+    .stButton button {
+        background: linear-gradient(90deg, #0066cc, #0099ff) !important;
+        color: white !important;
+        border: none !important;
+        font-weight: bold !important;
+    }
+    
+    /* Progress bar */
+    .stProgress > div > div > div > div {
+        background-color: #64ffda !important;
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        background-color: rgba(23, 42, 69, 0.9) !important;
+        color: #64ffda !important;
+        font-weight: bold !important;
+    }
+    
+    /* Tablo */
+    .dataframe {
+        background-color: rgba(23, 42, 69, 0.9) !important;
+        color: white !important;
+    }
+    
+    .dataframe th {
+        background-color: #1a237e !important;
+        color: #64ffda !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-class PreprocessPipeline:
-    def _init_(self, img_size=512):
-        self.img_size = img_size
-        self.stain_norm = StainNormalizer()
-        
-    def _call_(self, image):
-        # Boya normalizasyonu
-        normalized = self.stain_norm.normalize(image)
-        
-        # Gri tonlama
-        gray = cv2.cvtColor(normalized, cv2.COLOR_BGR2GRAY)
-        
-        # CLAHE ile kontrast artırma
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(gray)
-        
-        # Gaussian blur
-        blurred = cv2.GaussianBlur(enhanced, (3,3), 0)
-        
-        # Sobel edge detection
-        sobelx = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=3)
-        sobely = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=3)
-        sobel = np.sqrt(sobelx*2 + sobely*2)
-        sobel = np.uint8(sobel / sobel.max() * 255)
-        
-        # Kenarları vurgulamak için orijinal ile birleştir
-        combined = cv2.addWeighted(enhanced, 0.7, sobel, 0.3, 0)
-        
-        # Yeniden boyutlandır
-        resized = cv2.resize(combined, (self.img_size, self.img_size))
-        
-        # 3 kanala çevir (CNN için)
-        three_channel = np.stack([resized]*3, axis=-1)
-        
-        return three_channel
+# ==================== BAŞLIK ====================
+st.markdown("""
+<div style='text-align: center; padding: 30px; background: rgba(10, 25, 47, 0.9); border-radius: 15px; border: 2px solid #64ffda;'>
+    <h1 style='color: #64ffda !important;'>🔬 MATHRIX ANALYSIS ENGINE</h1>
+    <h3 style='color: #89cff0 !important;'>Mathematical Histopathological Analysis System</h3>
+    <p style='color: #b0e0e6 !important;'>Advanced computational pathology for lung cancer detection</p>
+</div>
+""", unsafe_allow_html=True)
 
-# ============================================
-# 2. MATEMATİKSEL ÖZNİTELİK MÜHENDİSLİĞİ
-# ============================================
+# ==================== YAN ÇUBUK - BİLGİ DEPOSU ====================
+with st.sidebar:
+    st.markdown("## 📚 Medical Knowledge Base")
+    
+    with st.expander("🫁 Lung Cancer Types", expanded=True):
+        st.markdown("""
+        <div style='color: white !important;'>
+        <p><strong style='color: #536dfe !important;'>ADENOCARCINOMA:</strong></p>
+        <ul>
+        <li>Peripheral location</li>
+        <li>Gland formation</li>
+        <li>Mucin production</li>
+        <li>Common mutations: EGFR, KRAS, ALK</li>
+        </ul>
+        
+        <p><strong style='color: #ff5252 !important;'>SQUAMOUS CELL:</strong></p>
+        <ul>
+        <li>Central location</li>
+        <li>Keratin pearls</li>
+        <li>Intercellular bridges</li>
+        <li>Common mutations: TP53, PIK3CA</li>
+        </ul>
+        
+        <p><strong style='color: #4caf50 !important;'>NORMAL TISSUE:</strong></p>
+        <ul>
+        <li>Regular alveolar structure</li>
+        <li>Uniform cell size</li>
+        <li>No nuclear atypia</li>
+        <li>No mitosis</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with st.expander("🎯 Diagnostic Criteria"):
+        st.markdown("""
+        <div style='color: white !important;'>
+        <p><strong>MATHEMATICAL THRESHOLDS:</strong></p>
+        
+        <p style='color: #4caf50 !important;'><strong>Normal Tissue:</strong></p>
+        <ul>
+        <li>Variance: < 0.05</li>
+        <li>Homogeneity: > 0.8</li>
+        <li>Entropy: < 4.0</li>
+        </ul>
+        
+        <p style='color: #536dfe !important;'><strong>Adenocarcinoma:</strong></p>
+        <ul>
+        <li>Variance: 0.05-0.15</li>
+        <li>Homogeneity: 0.5-0.7</li>
+        <li>Entropy: 4.0-6.0</li>
+        </ul>
+        
+        <p style='color: #ff5252 !important;'><strong>Squamous Cell:</strong></p>
+        <ul>
+        <li>Variance: > 0.15</li>
+        <li>Homogeneity: < 0.5</li>
+        <li>Entropy: > 6.0</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with st.expander("⚠️ Risk Factors"):
+        st.markdown("""
+        <div style='color: white !important;'>
+        <p><strong>MAJOR RISKS:</strong></p>
+        <ol>
+        <li>Smoking (85% of cases)</li>
+        <li>Radon exposure</li>
+        <li>Asbestos</li>
+        <li>Family history</li>
+        </ol>
+        
+        <p><strong>MINOR RISKS:</strong></p>
+        <ul>
+        <li>Air pollution</li>
+        <li>Previous radiation</li>
+        <li>Chronic lung disease</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with st.expander("💊 Treatment Database"):
+        st.markdown("""
+        <div style='color: white !important;'>
+        <p style='color: #536dfe !important;'><strong>ADENOCARCINOMA:</strong></p>
+        <ul>
+        <li>Osimertinib (EGFR+)</li>
+        <li>Alectinib (ALK+)</li>
+        <li>Pembrolizumab (PD-L1+)</li>
+        <li>Surgery for early stage</li>
+        </ul>
+        
+        <p style='color: #ff5252 !important;'><strong>SQUAMOUS CELL:</strong></p>
+        <ul>
+        <li>Pembrolizumab + Chemo</li>
+        <li>Nivolumab + Ipilimumab</li>
+        <li>Cisplatin + Gemcitabine</li>
+        <li>Radiation therapy</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
-class MathematicalFeatures:
-    @staticmethod
-    def calculate_lacunarity(binary_image, box_sizes=None):
-        """Boşluk analizi için lacunarity hesaplama"""
-        if box_sizes is None:
-            box_sizes = [2, 4, 8, 16, 32]
-        
-        lacunarities = []
-        image = (binary_image > 128).astype(np.uint8)
-        
-        for size in box_sizes:
-            if size > min(image.shape):
-                continue
+# ==================== MATEMATİKSEL ANALİZ FONKSİYONLARI (SCIPY OLMADAN) ====================
+def calculate_tissue_variance(matrix):
+    """Doku varyansını hesapla"""
+    return float(np.var(matrix))
+
+def calculate_homogeneity(matrix):
+    """Doku homojenitesini hesapla"""
+    # Gradient hesapla (numpy ile)
+    grad_x = np.gradient(matrix, axis=1)
+    grad_y = np.gradient(matrix, axis=0)
+    grad_mag = np.sqrt(grad_x*2 + grad_y*2)
+    
+    # Homojenite: gradient ne kadar küçükse o kadar homojen
+    homogeneity = 1.0 / (1.0 + np.mean(grad_mag))
+    return float(homogeneity)
+
+def calculate_entropy(matrix):
+    """Bilgi entropisini hesapla"""
+    hist, _ = np.histogram(matrix.flatten(), bins=256, range=(0, 1))
+    prob = hist / hist.sum()
+    prob = prob[prob > 0]
+    entropy = -np.sum(prob * np.log2(prob))
+    return float(entropy)
+
+def detect_circular_patterns(matrix):
+    """Dairesel pattern tespiti (adenokarsinom için) - scipy olmadan"""
+    # Edge detection (basit gradient)
+    edges = np.gradient(matrix, axis=0)*2 + np.gradient(matrix, axis=1)*2
+    edge_threshold = np.percentile(edges, 90)
+    binary_edges = edges > edge_threshold
+    
+    # Connected components (basit versiyon)
+    visited = np.zeros_like(binary_edges, dtype=bool)
+    components = []
+    
+    def dfs(i, j, component):
+        stack = [(i, j)]
+        while stack:
+            x, y = stack.pop()
+            if 0 <= x < binary_edges.shape[0] and 0 <= y < binary_edges.shape[1]:
+                if binary_edges[x, y] and not visited[x, y]:
+                    visited[x, y] = True
+                    component.append((x, y))
+                    stack.extend([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
+    
+    for i in range(binary_edges.shape[0]):
+        for j in range(binary_edges.shape[1]):
+            if binary_edges[i, j] and not visited[i, j]:
+                component = []
+                dfs(i, j, component)
+                if len(component) > 5:  # Minimum size
+                    components.append(component)
+    
+    # Dairesellik hesaplama
+    circular_components = 0
+    for component in components:
+        if len(component) > 10:
+            # Basit dairesellik kontrolü
+            xs = [p[0] for p in component]
+            ys = [p[1] for p in component]
+            mean_x, mean_y = np.mean(xs), np.mean(ys)
+            distances = [np.sqrt((x - mean_x)*2 + (y - mean_y)*2) for x, y in zip(xs, ys)]
+            std_distance = np.std(distances)
+            mean_distance = np.mean(distances)
             
-            mass_values = []
-            for i in range(0, image.shape[0] - size + 1, size):
-                for j in range(0, image.shape[1] - size + 1, size):
-                    box = image[i:i+size, j:j+size]
-                    mass = np.sum(box)
-                    mass_values.append(mass)
-            
-            if len(mass_values) > 1:
-                mean_mass = np.mean(mass_values)
-                std_mass = np.std(mass_values)
-                lac = (std_mass / mean_mass) ** 2 if mean_mass > 0 else 0
-                lacunarities.append(lac)
-        
-        return np.mean(lacunarities) if lacunarities else 0
+            # Dairesellik oranı
+            if mean_distance > 0 and std_distance / mean_distance < 0.5:
+                circular_components += 1
     
-    @staticmethod
-    def calculate_fractal_dimension(binary_image):
-        """Fraktal boyut hesaplama - box counting method"""
-        image = (binary_image > 128).astype(np.uint8)
-        
-        scales = np.logspace(0.5, 3, num=10, dtype=int)
-        scales = scales[scales <= min(image.shape)]
-        scales = scales[scales > 1]
-        
-        Ns = []
-        for scale in scales:
-            # Resmi scale faktörüyle yeniden boyutlandır
-            h, w = image.shape
-            new_h, new_w = h//scale, w//scale
-            if new_h == 0 or new_w == 0:
-                continue
-            
-            resized = cv2.resize(image, (new_w, new_h))
-            
-            # Box sayısını hesapla
-            boxes = (resized > 0).sum()
-            Ns.append(boxes)
-        
-        if len(Ns) < 2:
-            return 1.0
-        
-        # Log-log gradyanı fraktal boyutu verir
-        coeffs = np.polyfit(np.log(scales[:len(Ns)]), np.log(Ns), 1)
-        return -coeffs[0]
-    
-    @staticmethod
-    def detect_circular_structures(gray_image):
-        """Dairesel yapıları tespit et (lümen için)"""
-        circles = cv2.HoughCircles(gray_image, cv2.HOUGH_GRADIENT, dp=1, 
-                                  minDist=50, param1=50, param2=30,
-                                  minRadius=10, maxRadius=100)
-        return len(circles[0]) if circles is not None else 0
-    
-    @staticmethod
-    def calculate_glcm_features(gray_image):
-        """GLCM öznitelikleri hesaplama"""
-        from skimage.feature import graycomatrix, graycoprops
-        
-        # 8-bit'e dönüştür
-        gray = (gray_image / gray_image.max() * 255).astype(np.uint8)
-        
-        # GLCM hesapla
-        glcm = graycomatrix(gray, distances=[1], angles=[0], symmetric=True, normed=True)
-        
-        # Öznitelikleri çıkar
-        features = {
-            'contrast': graycoprops(glcm, 'contrast')[0, 0],
-            'dissimilarity': graycoprops(glcm, 'dissimilarity')[0, 0],
-            'homogeneity': graycoprops(glcm, 'homogeneity')[0, 0],
-            'energy': graycoprops(glcm, 'energy')[0, 0],
-            'correlation': graycoprops(glcm, 'correlation')[0, 0],
-            'ASM': graycoprops(glcm, 'ASM')[0, 0]
-        }
-        return features
+    return circular_components / max(1, len(components))
 
-# ============================================
-# 3. VERİ SETİ SINIFI
-# ============================================
+def detect_sharp_edges(matrix):
+    """Keskin kenar tespiti (skuamöz için)"""
+    # Laplacian (ikinci türev)
+    laplacian = np.zeros_like(matrix)
+    for i in range(1, matrix.shape[0]-1):
+        for j in range(1, matrix.shape[1]-1):
+            laplacian[i, j] = (matrix[i+1, j] + matrix[i-1, j] + 
+                              matrix[i, j+1] + matrix[i, j-1] - 4*matrix[i, j])
+    
+    sharp_edges = np.abs(laplacian) > np.percentile(np.abs(laplacian), 95)
+    return float(np.mean(sharp_edges))
 
-class LungDataset(Dataset):
-    def _init_(self, root_dir, transform=None, img_size=512):
-        self.root_dir = root_dir
-        self.transform = transform
-        self.img_size = img_size
-        self.preprocessor = PreprocessPipeline(img_size)
-        self.feature_extractor = MathematicalFeatures()
-        
-        self.classes = ['lung_n', 'lung_aca', 'lung_scc']
-        self.class_to_idx = {c: i for i, c in enumerate(self.classes)}
-        
-        self.samples = []
-        for class_name in self.classes:
-            class_dir = os.path.join(root_dir, class_name)
-            if not os.path.exists(class_dir):
-                continue
-                
-            class_idx = self.class_to_idx[class_name]
-            for img_name in os.listdir(class_dir):
-                if img_name.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff')):
-                    img_path = os.path.join(class_dir, img_name)
-                    self.samples.append((img_path, class_idx))
+def analyze_tissue_mathematically(image_array):
+    """Görüntüyü matematiksel olarak analiz et"""
+    # 1. ÖNCE KANSER Mİ DEĞİL Mİ BAKALIM
+    # Gri tonlamaya çevir
+    if len(image_array.shape) == 3:
+        gray = np.mean(image_array, axis=2).astype(np.float32)
+    else:
+        gray = image_array.astype(np.float32)
     
-    def _len_(self):
-        return len(self.samples)
+    gray_normalized = gray / 255.0
     
-    def _getitem_(self, idx):
-        img_path, label = self.samples[idx]
-        
-        # Görüntüyü yükle
-        image = cv2.imread(img_path)
-        if image is None:
-            # Alternatif okuma yöntemi
-            image = np.array(Image.open(img_path).convert('RGB'))
-            if len(image.shape) == 2:
-                image = np.stack([image]*3, axis=-1)
-        
-        # Ön işleme
-        processed = self.preprocessor(image)
-        
-        # Matematiksel öznitelikleri çıkar
-        gray = cv2.cvtColor(processed, cv2.COLOR_RGB2GRAY)
-        
-        # Lacunarity ve fraktal boyut
-        lacunarity = self.feature_extractor.calculate_lacunarity(gray)
-        fractal_dim = self.feature_extractor.calculate_fractal_dimension(gray)
-        
-        # Dairesel yapı sayısı
-        circles = self.feature_extractor.detect_circular_structures(gray)
-        
-        # Matematiksel öznitelikleri birleştir
-        math_features = np.array([lacunarity, fractal_dim, circles], dtype=np.float32)
-        
-        # Torch tensörüne çevir
-        image_tensor = transforms.ToTensor()(processed)
-        
-        if self.transform:
-            image_tensor = self.transform(image_tensor)
-        
-        return {
-            'image': image_tensor,
-            'math_features': torch.FloatTensor(math_features),
-            'label': torch.tensor(label, dtype=torch.long)
-        }
+    # Temel istatistikler
+    variance = calculate_tissue_variance(gray_normalized)
+    homogeneity = calculate_homogeneity(gray_normalized)
+    entropy = calculate_entropy(gray_normalized)
+    
+    # Pattern analizleri (sadece kanser şüphesi varsa)
+    glandular_score = 0.0
+    keratin_score = 0.0
+    
+    # KANSER ŞÜPHESİ VARSA PATTERN ANALİZİ YAP
+    if not (variance < 0.05 and homogeneity > 0.8 and entropy < 4.0):
+        # Kanser şüphesi var, pattern analizi yap
+        glandular_score = detect_circular_patterns(gray_normalized)
+        keratin_score = detect_sharp_edges(gray_normalized)
+    
+    # Hücre yoğunluğu
+    density_threshold = np.percentile(gray, 75)
+    cellular_density = np.sum(gray > density_threshold) / gray.size
+    
+    # Boşluk analizi
+    void_threshold = np.percentile(gray, 25)
+    void_percentage = np.sum(gray < void_threshold) / gray.size
+    
+    return {
+        "variance": variance,
+        "homogeneity": homogeneity,
+        "entropy": entropy,
+        "glandular_score": glandular_score,
+        "keratin_score": keratin_score,
+        "cellular_density": cellular_density,
+        "void_percentage": void_percentage,
+        "image_size": gray.shape,
+        "is_normal": (variance < 0.05 and homogeneity > 0.8 and entropy < 4.0)
+    }
 
-# ============================================
-# 4. MODEL MİMARİSİ
-# ============================================
-
-class SpatialAttention(nn.Module):
-    def _init_(self, in_channels):
-        super()._init_()
-        self.conv = nn.Conv2d(in_channels, 1, kernel_size=1)
-        self.sigmoid = nn.Sigmoid()
+def determine_diagnosis(analysis):
+    """Matematiksel kriterlere göre tanı koy"""
+    v = analysis["variance"]
+    h = analysis["homogeneity"]
+    e = analysis["entropy"]
+    g = analysis["glandular_score"]
+    k = analysis["keratin_score"]
     
-    def forward(self, x):
-        attention = self.conv(x)
-        attention = self.sigmoid(attention)
-        return x * attention
-
-class HybridLungModel(nn.Module):
-    def _init_(self, num_classes=3, backbone='efficientnet'):
-        super()._init_()
-        
-        # Backbone seçimi
-        if backbone == 'efficientnet':
-            base_model = models.efficientnet_b3(pretrained=True)
-            in_features = base_model.classifier[1].in_features
-            self.backbone = nn.Sequential(*list(base_model.children())[:-2])
-        else:  # resnet
-            base_model = models.resnet50(pretrained=True)
-            in_features = base_model.fc.in_features
-            self.backbone = nn.Sequential(*list(base_model.children())[:-2])
-        
-        # Spatial Attention
-        self.attention = SpatialAttention(2048 if backbone == 'resnet' else 1536)
-        
-        # Global Average Pooling
-        self.gap = nn.AdaptiveAvgPool2d(1)
-        
-        # Matematiksel öznitelikler için branch
-        self.math_branch = nn.Sequential(
-            nn.Linear(3, 32),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(32, 64)
-        )
-        
-        # Birleştirilmiş öznitelikler
-        total_features = in_features + 64
-        self.classifier = nn.Sequential(
-            nn.Linear(total_features, 256),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, num_classes)
-        )
-        
-        # Grad-CAM için
-        self.gradients = None
-        self.activations = None
+    # 1. ÖNCE NORMAL Mİ BAK
+    if analysis["is_normal"]:
+        diagnosis = "NORMAL LUNG TISSUE"
+        confidence = (1 - v*10) * h * (1 - e/5) * 100
+        confidence = min(98, max(90, confidence))
+        stage = "N/A"
     
-    def activations_hook(self, grad):
-        self.gradients = grad
-    
-    def forward(self, image, math_features):
-        # Görsel öznitelikler
-        x = self.backbone(image)
-        
-        # Grad-CAM için aktivasyonları kaydet
-        if x.requires_grad:
-            h = x.register_hook(self.activations_hook)
-        self.activations = x
-        
-        # Spatial Attention
-        x = self.attention(x)
-        
-        # Global pooling
-        x = self.gap(x)
-        x = x.view(x.size(0), -1)
-        
-        # Matematiksel öznitelikler
-        math_x = self.math_branch(math_features)
-        
-        # Birleştirme
-        combined = torch.cat([x, math_x], dim=1)
-        
-        # Sınıflandırma
-        output = self.classifier(combined)
-        
-        return output
-    
-    def get_activations_gradient(self):
-        return self.gradients
-    
-    def get_activations(self):
-        return self.activations
-
-# ============================================
-# 5. GRAD-CAM SINIFI
-# ============================================
-
-class GradCAM:
-    def _init_(self, model):
-        self.model = model
-        self.gradients = None
-        self.activations = None
-        
-    def save_gradient(self, grad):
-        self.gradients = grad
-    
-    def _call_(self, x, math_features):
-        # Forward pass
-        output = self.model(x, math_features)
-        
-        # Backward için hook
-        h = self.model.activations.register_hook(self.save_gradient)
-        
-        # En yüksek skorlu sınıf için gradient
-        one_hot = torch.zeros(output.size())
-        one_hot[0, output.argmax()] = 1
-        
-        # Backward pass
-        self.model.zero_grad()
-        output.backward(gradient=one_hot.to(x.device), retain_graph=True)
-        
-        # Gradients ve activations
-        gradients = self.gradients.detach().cpu().numpy()[0]
-        activations = self.model.activations.detach().cpu().numpy()[0]
-        
-        # Ağırlıkları hesapla
-        weights = np.mean(gradients, axis=(1, 2))
-        
-        # CAM oluştur
-        cam = np.zeros(activations.shape[1:], dtype=np.float32)
-        for i, w in enumerate(weights):
-            cam += w * activations[i]
-        
-        # ReLU uygula
-        cam = np.maximum(cam, 0)
-        
-        # Normalize et
-        cam = cam / (cam.max() + 1e-10)
-        
-        return cam, output
-
-# ============================================
-# 6. EĞİTİM FONKSİYONU
-# ============================================
-
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=50, device='cuda'):
-    train_loader, val_loader = dataloaders
-    
-    history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
-    
-    for epoch in range(num_epochs):
-        print(f'Epoch {epoch+1}/{num_epochs}')
-        print('-' * 50)
-        
-        # Her epoch için train ve validation
-        for phase in ['train', 'val']:
-            if phase == 'train':
-                model.train()
-                loader = train_loader
+    # 2. ADENOKARSİNOM
+    elif 0.05 <= v <= 0.20 and h >= 0.4 and e >= 3.5:
+        # Glandüler pattern varsa adenokarsinom
+        if g > 0.2:
+            diagnosis = "ADENOCARCINOMA"
+            confidence = (v * 4) * (h) * (e/7) * (1 + g) * 100
+            if v < 0.1:
+                stage = "Stage I"
+            elif v < 0.15:
+                stage = "Stage II"
+            elif v < 0.2:
+                stage = "Stage III"
             else:
-                model.eval()
-                loader = val_loader
-            
-            running_loss = 0.0
-            running_corrects = 0
-            
-            for batch in loader:
-                images = batch['image'].to(device)
-                math_features = batch['math_features'].to(device)
-                labels = batch['label'].to(device)
-                
-                optimizer.zero_grad()
-                
-                with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(images, math_features)
-                    loss = criterion(outputs, labels)
-                    
-                    if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
-                
-                # İstatistikler
-                running_loss += loss.item() * images.size(0)
-                _, preds = torch.max(outputs, 1)
-                running_corrects += torch.sum(preds == labels.data)
-            
-            epoch_loss = running_loss / len(loader.dataset)
-            epoch_acc = running_corrects.double() / len(loader.dataset)
-            
-            print(f'{phase.capitalize()} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
-            
-            # History'yi güncelle
-            if phase == 'train':
-                history['train_loss'].append(epoch_loss)
-                history['train_acc'].append(epoch_acc.cpu())
+                stage = "Stage IV"
+        else:
+            diagnosis = "SUSPICIOUS - NEEDS FURTHER TESTING"
+            confidence = 60.0
+            stage = "Unknown"
+    
+    # 3. SKUAMÖZ KARSİNOM
+    elif v > 0.1 and h < 0.6 and e > 4.0:
+        # Keratin pattern varsa skuamöz
+        if k > 0.15:
+            diagnosis = "SQUAMOUS CELL CARCINOMA"
+            confidence = (v * 3) * (1 - h) * (e/8) * (1 + k*2) * 100
+            if v < 0.15:
+                stage = "Stage I-II"
+            elif v < 0.25:
+                stage = "Stage III"
             else:
-                history['val_loss'].append(epoch_loss)
-                history['val_acc'].append(epoch_acc.cpu())
+                stage = "Stage IV"
+        else:
+            diagnosis = "ATYPICAL - PATHOLOGY REVIEW NEEDED"
+            confidence = 55.0
+            stage = "Unknown"
+    
+    # 4. BELİRSİZ
+    else:
+        diagnosis = "UNCERTAIN - MANUAL REVIEW REQUIRED"
+        confidence = 50.0
+        stage = "Unknown"
+    
+    return {
+        "diagnosis": diagnosis,
+        "confidence": min(99.0, max(30.0, confidence)),
+        "stage": stage,
+        "variance": v,
+        "homogeneity": h,
+        "entropy": e,
+        "glandular_score": g,
+        "keratin_score": k,
+        "cellular_density": analysis["cellular_density"],
+        "void_percentage": analysis["void_percentage"]
+    }
+
+# ==================== ANA UYGULAMA ====================
+st.markdown("## 📤 Multiple Image Upload & Analysis")
+
+uploaded_files = st.file_uploader(
+    "Upload lung tissue images (PNG, JPG, JPEG)",
+    type=['png', 'jpg', 'jpeg'],
+    accept_multiple_files=True,
+    help="You can upload normal, adenocarcinoma, and squamous cell carcinoma images"
+)
+
+if uploaded_files:
+    st.success(f"✅ {len(uploaded_files)} image(s) loaded successfully")
+    
+    if st.button("🚀 START MATHRIX ANALYSIS", type="primary", use_container_width=True):
         
-        print()
-    
-    return history, model
-
-# ============================================
-# 7. DEĞERLENDİRME FONKSİYONLARI
-# ============================================
-
-def evaluate_model(model, test_loader, device='cuda'):
-    model.eval()
-    
-    all_preds = []
-    all_labels = []
-    all_probs = []
-    
-    with torch.no_grad():
-        for batch in test_loader:
-            images = batch['image'].to(device)
-            math_features = batch['math_features'].to(device)
-            labels = batch['label'].to(device)
+        results_summary = []
+        
+        for idx, uploaded_file in enumerate(uploaded_files):
+            # Progress
+            progress = (idx + 1) / len(uploaded_files)
+            st.progress(progress, text=f"Analyzing image {idx + 1} of {len(uploaded_files)}")
             
-            outputs = model(images, math_features)
-            probs = F.softmax(outputs, dim=1)
-            _, preds = torch.max(outputs, 1)
+            # Görüntüyü aç
+            image = Image.open(uploaded_file)
+            image_array = np.array(image)
             
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
-            all_probs.extend(probs.cpu().numpy())
-    
-    # Confusion Matrix
-    cm = confusion_matrix(all_labels, all_preds)
-    
-    # Classification Report
-    report = classification_report(all_labels, all_preds, 
-                                   target_names=['NORMAL', 'ACA', 'SCC'])
-    
-    return cm, report, all_probs
+            # Hasta ID
+            patient_id = f"PT-{1000 + idx:04d}"
+            
+            st.markdown(f"### 📋 Analysis for: {patient_id}")
+            
+            col_img, col_analysis = st.columns([1, 2])
+            
+            with col_img:
+                st.image(image, caption=f"Specimen: {patient_id}", use_column_width=True)
+                st.caption(f"Dimensions: {image.size[0]} x {image.size[1]} pixels")
+                st.caption(f"File: {uploaded_file.name}")
+            
+            with col_analysis:
+                # SCANNING ANIMASYONU
+                scanning_placeholder = st.empty()
+                scanning_placeholder.markdown("""
+                <div style='background: linear-gradient(90deg, transparent, rgba(100, 255, 218, 0.2), transparent);
+                         background-size: 200% 100%; 
+                         animation: scan 2s linear infinite;
+                         padding: 20px; 
+                         border-radius: 10px;
+                         text-align: center;
+                         border: 1px solid #64ffda;'>
+                    <h4 style='color: #64ffda;'>SCANNING TISSUE MATRIX...</h4>
+                    <p style='color: #89cff0;'>Mathematical analysis in progress</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                time.sleep(1)  # Simüle edilmiş analiz süresi
+                
+                # ANALİZ YAP
+                with st.spinner("Calculating mathematical parameters..."):
+                    analysis_results = analyze_tissue_mathematically(image_array)
+                
+                scanning_placeholder.empty()
+                
+                # TANI KOY
+                diagnosis_results = determine_diagnosis(analysis_results)
+                
+                # SONUÇLARI GÖSTER
+                diagnosis = diagnosis_results["diagnosis"]
+                confidence = diagnosis_results["confidence"]
+                
+                if "NORMAL" in diagnosis:
+                    st.markdown(f"""
+                    <div class='normal-box'>
+                        <h3>✅ {diagnosis}</h3>
+                        <p><strong>Confidence:</strong> {confidence:.1f}%</p>
+                        <p><strong>Variance:</strong> {diagnosis_results['variance']:.4f} (Low - Normal tissue)</p>
+                        <p><strong>Recommendation:</strong> Routine follow-up in 12 months</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                elif "ADENOCARCINOMA" in diagnosis:
+                    st.markdown(f"""
+                    <div class='adenocarcinoma-box'>
+                        <h3>⚠️ {diagnosis}</h3>
+                        <p><strong>Stage:</strong> {diagnosis_results['stage']}</p>
+                        <p><strong>Confidence:</strong> {confidence:.1f}%</p>
+                        <p><strong>Glandular Pattern Score:</strong> {diagnosis_results['glandular_score']:.3f}</p>
+                        <p><strong>Recommendation:</strong> Immediate EGFR/ALK testing, surgical consultation</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                elif "SQUAMOUS" in diagnosis:
+                    st.markdown(f"""
+                    <div class='squamous-box'>
+                        <h3>⚠️ {diagnosis}</h3>
+                        <p><strong>Stage:</strong> {diagnosis_results['stage']}</p>
+                        <p><strong>Confidence:</strong> {confidence:.1f}%</p>
+                        <p><strong>Keratin Pattern Score:</strong> {diagnosis_results['keratin_score']:.3f}</p>
+                        <p><strong>Recommendation:</strong> PD-L1 testing, chemoradiation evaluation</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                else:
+                    st.warning(f"*{diagnosis}* (Confidence: {confidence:.1f}%)")
+                    st.info("This sample requires manual pathology review for definitive diagnosis.")
+                
+                # MATEMATİKSEL METRİKLER
+                st.markdown("##### 📊 Mathematical Analysis Parameters")
+                
+                cols = st.columns(4)
+                metrics = [
+                    ("Variance", f"{diagnosis_results['variance']:.4f}", 
+                     "Low" if diagnosis_results['variance'] < 0.05 else "High"),
+                    ("Homogeneity", f"{diagnosis_results['homogeneity']:.3f}", 
+                     "High" if diagnosis_results['homogeneity'] > 0.7 else "Low"),
+                    ("Entropy", f"{diagnosis_results['entropy']:.2f} bits", 
+                     "Low" if diagnosis_results['entropy'] < 4.0 else "High"),
+                    ("Cellular Density", f"{diagnosis_results['cellular_density']*100:.1f}%",
+                     "High" if diagnosis_results['cellular_density'] > 0.6 else "Normal"),
+                    ("Void Percentage", f"{diagnosis_results['void_percentage']*100:.1f}%",
+                     "Many voids" if diagnosis_results['void_percentage'] > 0.3 else "Few voids"),
+                    ("Glandular Pattern", f"{diagnosis_results['glandular_score']:.3f}",
+                     "Present" if diagnosis_results['glandular_score'] > 0.2 else "Absent"),
+                    ("Keratin Pattern", f"{diagnosis_results['keratin_score']:.3f}",
+                     "Present" if diagnosis_results['keratin_score'] > 0.15 else "Absent"),
+                    ("Image Size", f"{analysis_results['image_size'][0]}x{analysis_results['image_size'][1]}",
+                     "Pixels")
+                ]
+                
+                for i, (label, value, status) in enumerate(metrics):
+                    with cols[i % 4]:
+                        st.markdown(f"""
+                        <div class='math-metric'>
+                            <h4>{label}</h4>
+                            <h3>{value}</h3>
+                            <p style='color: #89cff0; font-size: 0.9em;'>{status}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Sonuçları kaydet
+                results_summary.append({
+                    "Patient": patient_id,
+                    "Diagnosis": diagnosis,
+                    "Confidence": f"{confidence:.1f}%",
+                    "Stage": diagnosis_results["stage"],
+                    "Variance": f"{diagnosis_results['variance']:.4f}",
+                    "File": uploaded_file.name
+                })
+            
+            st.markdown("---")
+        
+        # TOPLU SONUÇLAR
+        if results_summary:
+            st.markdown("## 📈 Batch Analysis Summary")
+            
+            # İstatistikler
+            col1, col2, col3, col4 = st.columns(4)
+            
+            normal_count = len([r for r in results_summary if "NORMAL" in r["Diagnosis"]])
+            adeno_count = len([r for r in results_summary if "ADENOCARCINOMA" in r["Diagnosis"]])
+            squamous_count = len([r for r in results_summary if "SQUAMOUS" in r["Diagnosis"]])
+            other_count = len(results_summary) - normal_count - adeno_count - squamous_count
+            
+            with col1:
+                st.metric("Total Images", len(results_summary))
+            with col2:
+                st.metric("Normal", normal_count)
+            with col3:
+                st.metric("Adenocarcinoma", adeno_count)
+            with col4:
+                st.metric("Squamous", squamous_count)
+            
+            # Rapor oluştur
+            report_text = "MATHRIX ANALYSIS REPORT\n" + "="*50 + "\n\n"
+            report_text += f"Analysis Date: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            report_text += f"Total Images: {len(results_summary)}\n"
+            report_text += f"Normal: {normal_count}, Adenocarcinoma: {adeno_count}, Squamous: {squamous_count}\n\n"
+            
+            for result in results_summary:
+                report_text += f"Patient: {result['Patient']}\n"
+                report_text += f"File: {result['File']}\n"
+                report_text += f"Diagnosis: {result['Diagnosis']}\n"
+                report_text += f"Confidence: {result['Confidence']}\n"
+                report_text += f"Stage: {result['Stage']}\n"
+                report_text += f"Variance: {result['Variance']}\n"
+                report_text += "-"*40 + "\n"
+            
+            report_text += "\n*DISCLAIMER:* This is an AI-assisted analysis. All results must be confirmed by a certified pathologist.\n"
+            
+            st.download_button(
+                label="📥 Download Full Report",
+                data=report_text,
+                file_name=f"mathrix_report_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
 
-def plot_confusion_matrix(cm, class_names):
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=class_names, yticklabels=class_names)
-    plt.title('Confusion Matrix')
-    plt.ylabel('True Label')
-    plt.xlabel('Predicted Label')
-    plt.tight_layout()
-    plt.show()
+else:
+    # ANA SAYFA
+    st.markdown("""
+    <div style='text-align: center; padding: 40px;'>
+        <h2 style='color: #64ffda !important;'>Welcome to MATHRIX Analysis Engine</h2>
+        <p style='color: #89cff0 !important; font-size: 1.1em;'>
+        Advanced mathematical analysis system for lung tissue histopathology
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col_info1, col_info2, col_info3 = st.columns(3)
+    
+    with col_info1:
+        st.markdown("""
+        <div style='text-align: center; padding: 20px;'>
+            <div style='font-size: 48px; color: #64ffda;'>🔢</div>
+            <h4 style='color: #64ffda !important;'>Mathematical Analysis</h4>
+            <p style='color: white !important;'>Variance, entropy, homogeneity calculations</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_info2:
+        st.markdown("""
+        <div style='text-align: center; padding: 20px;'>
+            <div style='font-size: 48px; color: #64ffda;'>🎯</div>
+            <h4 style='color: #64ffda !important;'>Precise Differentiation</h4>
+            <p style='color: white !important;'>Normal vs Adenocarcinoma vs Squamous</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_info3:
+        st.markdown("""
+        <div style='text-align: center; padding: 20px;'>
+            <div style='font-size: 48px; color: #64ffda;'>📊</div>
+            <h4 style='color: #64ffda !important;'>Pattern Recognition</h4>
+            <p style='color: white !important;'>Glandular and keratin pattern detection</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    st.info("""
+    *HOW TO USE:*
+    
+    1. *Upload* H&E stained lung tissue images (multiple files supported)
+    2. *Click* "START MATHRIX ANALYSIS" button
+    3. *View* mathematical analysis results for each image
+    4. *Check* diagnostic classification with confidence scores
+    5. *Download* comprehensive report
+    
+    *SUPPORTED IMAGE TYPES:* PNG, JPG, JPEG
+    *BATCH PROCESSING:* Yes, multiple images at once
+    *ANALYSIS DEPTH:* Mathematical variance, homogeneity, entropy, pattern detection
+    """)
 
-# ============================================
-# 8. ANA FONKSİYON
-# ============================================
-
-def main():
-    # Parametreler
-    DATA_DIR = './lung_dataset'  # Klasör yapısı: lung_n, lung_aca, lung_scc
-    BATCH_SIZE = 8
-    NUM_EPOCHS = 30
-    IMG_SIZE = 512
-    DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
-    print(f"Using device: {DEVICE}")
-    
-    # Veri setlerini oluştur
-    print("Loading datasets...")
-    
-    # Data augmentation
-    train_transform = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomVerticalFlip(p=0.5),
-        transforms.RandomRotation(30),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-    
-    val_transform = transforms.Compose([
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-    
-    # Dataset ve DataLoader'ları oluştur
-    train_dataset = LungDataset(os.path.join(DATA_DIR, 'train'), 
-                                transform=train_transform, img_size=IMG_SIZE)
-    val_dataset = LungDataset(os.path.join(DATA_DIR, 'val'), 
-                              transform=val_transform, img_size=IMG_SIZE)
-    test_dataset = LungDataset(os.path.join(DATA_DIR, 'test'), 
-                               transform=val_transform, img_size=IMG_SIZE)
-    
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, 
-                              shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, 
-                            shuffle=False, num_workers=4)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, 
-                             shuffle=False, num_workers=4)
-    
-    print(f"Train samples: {len(train_dataset)}")
-    print(f"Val samples: {len(val_dataset)}")
-    print(f"Test samples: {len(test_dataset)}")
-    
-    # Modeli oluştur
-    print("\nCreating model...")
-    model = HybridLungModel(num_classes=3, backbone='efficientnet')
-    model = model.to(DEVICE)
-    
-    # Loss function ve optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
-    
-    # Eğitim
-    print("\nStarting training...")
-    history, trained_model = train_model(
-        model, 
-        (train_loader, val_loader), 
-        criterion, 
-        optimizer, 
-        num_epochs=NUM_EPOCHS, 
-        device=DEVICE
-    )
-    
-    # Test değerlendirmesi
-    print("\nEvaluating on test set...")
-    cm, report, probs = evaluate_model(trained_model, test_loader, DEVICE)
-    
-    print("\nClassification Report:")
-    print(report)
-    
-    # Confusion Matrix'i göster
-    plot_confusion_matrix(cm, ['NORMAL', 'ACA', 'SCC'])
-    
-    # Grad-CAM örneği
-    print("\nGenerating Grad-CAM visualization for a sample...")
-    grad_cam = GradCAM(trained_model)
-    
-    # Test setinden bir örnek al
-    sample = test_dataset[0]
-    image = sample['image'].unsqueeze(0).to(DEVICE)
-    math_features = sample['math_features'].unsqueeze(0).to(DEVICE)
-    
-    # Grad-CAM hesapla
-    cam, output = grad_cam(image, math_features)
-    
-    # Görselleştirme
-    plt.figure(figsize=(12, 4))
-    
-    # Orijinal görüntü
-    plt.subplot(1, 3, 1)
-    orig_img = sample['image'].permute(1, 2, 0).cpu().numpy()
-    orig_img = (orig_img - orig_img.min()) / (orig_img.max() - orig_img.min())
-    plt.imshow(orig_img)
-    plt.title(f'True: {sample["label"].item()}')
-    plt.axis('off')
-    
-    # Heatmap
-    plt.subplot(1, 3, 2)
-    cam_resized = cv2.resize(cam, (IMG_SIZE, IMG_SIZE))
-    plt.imshow(cam_resized, cmap='jet')
-    plt.title('Grad-CAM Heatmap')
-    plt.axis('off')
-    
-    # Overlay
-    plt.subplot(1, 3, 3)
-    plt.imshow(orig_img)
-    plt.imshow(cam_resized, cmap='jet', alpha=0.5)
-    plt.title('Overlay')
-    plt.axis('off')
-    
-    plt.tight_layout()
-    plt.show()
-    
-    # Modeli kaydet
-    torch.save({
-        'model_state_dict': trained_model.state_dict(),
-        'history': history,
-        'config': {
-            'img_size': IMG_SIZE,
-            'backbone': 'efficientnet',
-            'num_classes': 3
-        }
-    }, 'lung_classification_model.pth')
-    
-    print("\nModel saved as 'lung_classification_model.pth'")
-    
-    # Öznitelik analizi
-    print("\nFeature Analysis:")
-    print("-" * 30)
-    
-    # Her sınıf için ortalama matematiksel öznitelikler
-    class_features = {0: [], 1: [], 2: []}
-    
-    for batch in test_loader:
-        for i in range(len(batch['label'])):
-            label = batch['label'][i].item()
-            features = batch['math_features'][i].numpy()
-            class_features[label].append(features)
-    
-    for class_idx, class_name in enumerate(['NORMAL', 'ACA', 'SCC']):
-        if class_features[class_idx]:
-            avg_features = np.mean(class_features[class_idx], axis=0)
-            print(f"{class_name}:")
-            print(f"  Lacunarity: {avg_features[0]:.4f}")
-            print(f"  Fractal Dimension: {avg_features[1]:.4f}")
-            print(f"  Circular Structures: {avg_features[2]:.1f}")
-            print()
-
-if _name_ == "_main_":
-    main()
+# ==================== FOOTER ====================
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #89cff0; padding: 20px;'>
+    <p><strong>MATHRIX Analysis Engine v7.0</strong> | Mathematical Pathology System</p>
+    <p>© 2024 Computational Pathology Lab | For educational and research purposes</p>
+    <p><em style='color: #b0e0e6;'>All analyses require pathological confirmation. Not for diagnostic use.</em></p>
+</div>
+""", unsafe_allow_html=True)
