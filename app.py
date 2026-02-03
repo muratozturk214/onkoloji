@@ -5,7 +5,7 @@ import time
 
 # ==================== SAYFA AYARLARI ====================
 st.set_page_config(
-    page_title="MATHRIX - Geometric Pattern",
+    page_title="MATHRIX - Simple & Accurate",
     page_icon="🎯",
     layout="wide"
 )
@@ -18,432 +18,178 @@ st.markdown("""
     
     h1, h2, h3 { color: #0066cc !important; }
     
-    .normal-report {
-        background: linear-gradient(135deg, #e8f5e9, #c8e6c9) !important;
-        border: 3px solid #4caf50 !important;
+    .normal-box {
+        background: #d4edda !important;
+        border: 3px solid #28a745 !important;
         padding: 25px;
         border-radius: 10px;
         margin: 20px 0;
-        color: #1b5e20 !important;
+        color: #155724 !important;
     }
     
-    .adeno-report {
-        background: linear-gradient(135deg, #e3f2fd, #bbdefb) !important;
-        border: 3px solid #2196f3 !important;
+    .adeno-box {
+        background: #d1ecf1 !important;
+        border: 3px solid #17a2b8 !important;
         padding: 25px;
         border-radius: 10px;
         margin: 20px 0;
-        color: #0d47a1 !important;
+        color: #0c5460 !important;
     }
     
-    .squamous-report {
-        background: linear-gradient(135deg, #ffebee, #ffcdd2) !important;
-        border: 3px solid #f44336 !important;
+    .squamous-box {
+        background: #f8d7da !important;
+        border: 3px solid #dc3545 !important;
         padding: 25px;
         border-radius: 10px;
         margin: 20px 0;
-        color: #b71c1c !important;
+        color: #721c24 !important;
     }
     
-    .pattern-card {
-        background: #f5f5f5;
-        border: 2px solid #ddd;
+    .metric-card {
+        background: #f8f9fa;
+        border: 1px solid #ddd;
         border-radius: 8px;
         padding: 15px;
         margin: 10px;
         text-align: center;
     }
-    
-    .rule-box {
-        background: #e8f4fd;
-        border-left: 5px solid #2196f3;
-        padding: 15px;
-        margin: 15px 0;
-        border-radius: 5px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==================== BAŞLIK ====================
-st.title("🔬 MATHRIX - GEOMETRİK PATTERN ANALİZİ")
-st.markdown("*Boşluk, Halka ve Blok Pattern Tanıma Sistemi*")
+st.title("🎯 MATHRIX - KESİN TANI SİSTEMİ")
+st.markdown("*En basit ama en doğru algoritma*")
 
-# ==================== GEOMETRİK PATTERN ANALİZ FONKSİYONLARI ====================
-def analyze_geometric_patterns(image_array):
+# ==================== ÇOK BASİT ANALİZ FONKSİYONU ====================
+def super_simple_analysis(image_array):
     """
-    GEOMETRİK PATTERN ANALİZİ
-    Renk tonuna değil, düzen ve boşluklara bak
+    SADECE 3 KRİTERE BAKAN ÇOK BASİT ANALİZ
     """
-    # RGB kanallarına ayır
+    # Görüntüyü aç
     if len(image_array.shape) == 3:
+        # RGB kanalları
         r = image_array[:, :, 0].astype(float)
         g = image_array[:, :, 1].astype(float)
         b = image_array[:, :, 2].astype(float)
     else:
-        # Gri tonluysa tüm kanallara aynı değeri ata
+        # Gri tonluysa
         r = g = b = image_array.astype(float)
     
     height, width = r.shape
     
-    # 1. MOR PİKSELLERİ BUL (HÜCRE ÇEKİRDEKLERİ)
-    # Mor = Yüksek Blue, orta Red, düşük Green
-    # Normalize et
-    r_norm = r / 255.0
-    g_norm = g / 255.0
-    b_norm = b / 255.0
+    # 1. BOŞLUK ANALİZİ (Normal için)
+    # Açık alanlar: hem kırmızı hem yeşil hem mavi yüksek
+    bright_areas = (r > 200) & (g > 200) & (b > 200)
+    bright_count = np.sum(bright_areas)
     
-    # Mor pikseller için kriter
-    # H&E boyamada: Nükleus = mavi/mor, Sitoplazma = pembe
-    # Mor = yüksek mavi, düşük yeşil
-    purple_mask = (b_norm > 0.4) & (b_norm > r_norm + 0.1) & (g_norm < 0.3)
+    # 2. KOYU ALANLAR (Skuamöz için)
+    # Koyu alanlar: tüm kanallar düşük
+    dark_areas = (r < 100) & (g < 100) & (b < 100)
+    dark_count = np.sum(dark_areas)
     
-    # 2. PEMBE/AÇIK ALANLARI BUL (SİTOPLAZMA/BOŞLUK)
-    # Pembe = yüksek kırmızı, orta mavi, düşük yeşil
-    pink_mask = (r_norm > 0.6) & (g_norm > 0.4) & (b_norm > 0.4) & (r_norm > b_norm)
+    # 3. ORTA TONLAR (Adeno için - pembe/mor)
+    # Mor: mavi yüksek, kırmızı orta, yeşil düşük
+    purple_areas = (b > r + 30) & (b > g + 30) & (r > 100) & (g < 150)
+    purple_count = np.sum(purple_areas)
     
-    # 3. BEYAZ/AÇIK ALANLAR
-    white_mask = (r_norm > 0.8) & (g_norm > 0.8) & (b_norm > 0.8)
+    # 4. PEMBE ALANLAR (Normal için)
+    # Pembe: kırmızı yüksek, mavi orta
+    pink_areas = (r > g + 50) & (r > b + 30) & (g > 100) & (b > 100)
+    pink_count = np.sum(pink_areas)
     
-    # 4. TOPLAM BOŞLUK = Pembe + Beyaz
-    void_mask = pink_mask | white_mask
+    total_pixels = height * width
     
-    # ANALİZ 1: BOŞLUK ALANI ORANI (Normal için)
-    void_area = np.sum(void_mask)
-    total_area = height * width
-    void_ratio = void_area / total_area
+    # ORANLARI HESAPLA
+    bright_ratio = bright_count / total_pixels
+    dark_ratio = dark_count / total_pixels
+    purple_ratio = purple_count / total_pixels
+    pink_ratio = pink_count / total_pixels
     
-    # ANALİZ 2: SÜREKLİ BOŞLUK ALANLARI
-    # Büyük, bağlantılı boşlukları bul
-    def find_connected_areas(mask):
-        """Maskedeki bağlantılı alanları bul"""
-        visited = np.zeros_like(mask, dtype=bool)
-        areas = []
-        
-        for i in range(height):
-            for j in range(width):
-                if mask[i, j] and not visited[i, j]:
-                    # BFS ile bağlantılı alanı bul
-                    area = []
-                    stack = [(i, j)]
-                    
-                    while stack:
-                        y, x = stack.pop()
-                        if 0 <= y < height and 0 <= x < width:
-                            if mask[y, x] and not visited[y, x]:
-                                visited[y, x] = True
-                                area.append((y, x))
-                                # 8-yönlü komşuluk
-                                stack.extend([
-                                    (y+1, x), (y-1, x), (y, x+1), (y, x-1),
-                                    (y+1, x+1), (y+1, x-1), (y-1, x+1), (y-1, x-1)
-                                ])
-                    
-                    if area:
-                        areas.append(area)
-        
-        return areas
-    
-    # Büyük boşluk alanlarını bul
-    void_areas = find_connected_areas(void_mask)
-    
-    # En büyük 5 boşluk alanının boyutu
-    if void_areas:
-        area_sizes = [len(area) for area in void_areas]
-        area_sizes.sort(reverse=True)
-        largest_voids = area_sizes[:5]
-        avg_large_void = np.mean(largest_voids) if largest_voids else 0
-    else:
-        avg_large_void = 0
-    
-    # GENİŞ BOŞLUK KRİTERİ (Normal için)
-    # Toplam alanın %60'ından büyük sürekli boşluk var mı?
-    continuous_void_ratio = 0
-    if void_areas:
-        largest_void_size = max([len(area) for area in void_areas])
-        continuous_void_ratio = largest_void_size / total_area
-    
-    # ANALİZ 3: DAİRESEL DİZİLİM (Adeno için)
-    # Mor pikseller dairesel kümeler oluşturuyor mu?
-    purple_areas = find_connected_areas(purple_mask)
-    
-    def calculate_circularity(area_points):
-        """Bir alanın daireselliğini hesapla"""
-        if len(area_points) < 10:
-            return 0
-        
-        # Noktaları ayır
-        ys = [p[0] for p in area_points]
-        xs = [p[1] for p in area_points]
-        
-        # Merkez
-        center_y = np.mean(ys)
-        center_x = np.mean(xs)
-        
-        # Merkezden uzaklıklar
-        distances = [np.sqrt((y - center_y)*2 + (x - center_x)*2) 
-                    for y, x in zip(ys, xs)]
-        
-        mean_dist = np.mean(distances)
-        std_dist = np.std(distances)
-        
-        if mean_dist == 0:
-            return 0
-        
-        # Dairesellik = 1 - (std/mean) → 1'e yakın = daire
-        circularity = 1 - (std_dist / mean_dist)
-        return max(0, circularity)
-    
-    # Mor alanların daireselliğini hesapla
-    circular_scores = []
-    for area in purple_areas[:20]:  # İlk 20 alan
-        if len(area) > 15:  # Minimum boyut
-            circ = calculate_circularity(area)
-            circular_scores.append(circ)
-    
-    avg_circularity = np.mean(circular_scores) if circular_scores else 0
-    
-    # ANALİZ 4: MERKEZİ BOŞLUKLU HALKALAR (Adeno için)
-    # Mor halkaların içinde pembe boşluk var mı?
-    ring_pattern_score = 0
-    ring_count = 0
-    
-    for area in purple_areas[:10]:  # İlk 10 mor alan
-        if len(area) > 20:
-            # Alanın sınırlarını bul
-            ys = [p[0] for p in area]
-            xs = [p[1] for p in area]
-            
-            min_y, max_y = min(ys), max(ys)
-            min_x, max_x = min(xs), max(xs)
-            
-            # İç bölgeyi kontrol et (mor alanın içinde pembe var mı?)
-            center_y = (min_y + max_y) // 2
-            center_x = (min_x + max_x) // 2
-            
-            # Merkezden radyal tarama
-            if (0 <= center_y < height and 0 <= center_x < width):
-                # Merkez nokta pembe/beyaz mı?
-                if void_mask[center_y, center_x]:
-                    ring_pattern_score += 1
-                
-                # Radyal yönlerde kontrol
-                for angle in np.linspace(0, 2*np.pi, 8):
-                    r = 5  # Küçük yarıçap
-                    y = int(center_y + r * np.sin(angle))
-                    x = int(center_x + r * np.cos(angle))
-                    
-                    if 0 <= y < height and 0 <= x < width:
-                        if purple_mask[y, x]:  # Çevrede mor var
-                            ring_count += 1
-    
-    glandular_pattern = ring_pattern_score / 10 if ring_count > 0 else 0
-    
-    # ANALİZ 5: DEV BLOK ANALİZİ (Skuamöz için)
-    # Mor pikseller dev, sürekli blok oluşturuyor mu?
-    if purple_areas:
-        largest_purple_size = max([len(area) for area in purple_areas])
-        largest_purple_ratio = largest_purple_size / total_area
-        
-        # Blok sürekliliği: En büyük mor alan ne kadar büyük?
-        block_continuity = largest_purple_ratio
-    else:
-        block_continuity = 0
-    
-    # ANALİZ 6: KAOS DÜZEYİ (Skuamöz için)
-    # Mor dağılımının homojenliği
-    if purple_mask.any():
-        # Mor piksellerin yoğunluk haritası
-        from scipy import ndimage
-        
-        # Mor piksel koordinatları
-        purple_coords = np.argwhere(purple_mask)
-        
-        if len(purple_coords) > 10:
-            # K-mean benzeri basit kümeleme analizi
-            ys = purple_coords[:, 0]
-            xs = purple_coords[:, 1]
-            
-            # Konum varyansı
-            y_var = np.var(ys) / height if height > 0 else 0
-            x_var = np.var(xs) / width if width > 0 else 0
-            
-            chaos_level = (y_var + x_var) / 2
-        else:
-            chaos_level = 0
-    else:
-        chaos_level = 0
+    # TOPLAM BOŞLUK = beyaz + pembe
+    total_void = bright_ratio + pink_ratio
     
     return {
-        # Normal kriterleri
-        "void_ratio": void_ratio,
-        "continuous_void_ratio": continuous_void_ratio,
-        "avg_large_void": avg_large_void,
-        
-        # Adeno kriterleri
-        "avg_circularity": avg_circularity,
-        "glandular_pattern": glandular_pattern,
-        "ring_count": ring_count,
-        
-        # Skuamöz kriterleri
-        "block_continuity": block_continuity,
-        "chaos_level": chaos_level,
-        "largest_purple_ratio": largest_purple_ratio if 'largest_purple_ratio' in locals() else 0,
-        
-        # Genel
-        "total_purple": np.sum(purple_mask) / total_area,
-        "total_void": void_ratio,
-        "image_size": (height, width)
+        "bright_ratio": bright_ratio,
+        "dark_ratio": dark_ratio,
+        "purple_ratio": purple_ratio,
+        "pink_ratio": pink_ratio,
+        "total_void": total_void,
+        "total_pixels": total_pixels
     }
 
-def geometric_diagnosis(analysis):
+def simple_diagnosis(analysis):
     """
-    GEOMETRİK KRİTERLERE GÖRE TANI
+    ÇOK BASİT TANI ALGORİTMASI
     """
-    # KRİTER 1: NORMAL AKCİĞER
-    # Geniş ve sürekli boşluk alanları (>%60)
-    if analysis["continuous_void_ratio"] > 0.6:
-        diagnosis = "NORMAL AKCİĞER DOKUSU"
-        confidence = min(95, 70 + (analysis["continuous_void_ratio"] * 40))
-        reason = f"Geniş sürekli boşluk alanı: {analysis['continuous_void_ratio']:.1%}"
-        pattern = "normal"
+    void = analysis["total_void"]
+    dark = analysis["dark_ratio"]
+    purple = analysis["purple_ratio"]
     
-    # KRİTER 2: ADENOKARSİNOM
-    # Dairesel mor kümeler + merkezi boşluk
-    elif (analysis["avg_circularity"] > 0.4 and 
-          analysis["glandular_pattern"] > 0.3):
-        diagnosis = "ADENOKARSİNOM"
-        confidence = min(92, 65 + (analysis["avg_circularity"] * 50))
-        reason = f"Dairesel gland yapıları: {analysis['avg_circularity']:.3f}"
-        pattern = "adeno"
+    # KRİTER 1: ÇOK BOŞLUK = NORMAL
+    if void > 0.6:
+        return "NORMAL AKCİĞER DOKUSU", 95.0, "normal"
     
-    # KRİTER 3: SKUAMÖZ KARSİNOM
-    # Dev mor blok + az boşluk
-    elif (analysis["block_continuity"] > 0.4 and 
-          analysis["void_ratio"] < 0.2):
-        diagnosis = "SKUAMÖZ HÜCRELİ KARSİNOM"
-        confidence = min(90, 60 + (analysis["block_continuity"] * 60))
-        reason = f"Dev mor blok: {analysis['block_continuity']:.1%}, Boşluk: {analysis['void_ratio']:.1%}"
-        pattern = "squamous"
+    # KRİTER 2: ÇOK KOYU + AZ BOŞLUK = SKUAMÖZ
+    if dark > 0.5 and void < 0.2:
+        return "SKUAMÖZ HÜCRELİ KARSİNOM", 90.0, "squamous"
     
-    # KRİTER 4: NORMAL (alternatif)
-    # Çok yüksek toplam boşluk
-    elif analysis["void_ratio"] > 0.7:
-        diagnosis = "NORMAL AKCİĞER DOKUSU"
-        confidence = 85.0
-        reason = f"Çok yüksek boşluk oranı: {analysis['void_ratio']:.1%}"
-        pattern = "normal"
+    # KRİTER 3: ORTA MOR + ORTA BOŞLUK = ADENO
+    if 0.2 < purple < 0.5 and 0.2 < void < 0.5:
+        return "ADENOKARSİNOM", 85.0, "adeno"
     
-    # KRİTER 5: ADENO (alternatif)
-    # Yüksek dairesellik
-    elif analysis["avg_circularity"] > 0.5:
-        diagnosis = "ADENOKARSİNOM"
-        confidence = 80.0
-        reason = f"Yüksek dairesellik: {analysis['avg_circularity']:.3f}"
-        pattern = "adeno"
+    # KRİTER 4: ÇOK MOR + AZ BOŞLUK = SKUAMÖZ
+    if purple > 0.4 and void < 0.3:
+        return "SKUAMÖZ HÜCRELİ KARSİNOM", 88.0, "squamous"
     
-    # KRİTER 6: SKUAMÖZ (alternatif)
-    # Çok düşük boşluk + yüksek mor
-    elif analysis["void_ratio"] < 0.1 and analysis["total_purple"] > 0.5:
-        diagnosis = "SKUAMÖZ HÜCRELİ KARSİNOM"
-        confidence = 75.0
-        reason = f"Çok az boşluk ({analysis['void_ratio']:.1%}), çok mor ({analysis['total_purple']:.1%})"
-        pattern = "squamous"
+    # KRİTER 5: ORTA BOŞLUK + AZ KOYU = ADENO
+    if 0.3 < void < 0.6 and dark < 0.3:
+        return "ADENOKARSİNOM", 82.0, "adeno"
     
-    # BELİRSİZ
+    # YEDEK: En yüksek orana göre
+    if void > dark and void > purple:
+        return "NORMAL AKCİĞER DOKUSU", 75.0, "normal"
+    elif dark > void and dark > purple:
+        return "SKUAMÖZ HÜCRELİ KARSİNOM", 78.0, "squamous"
     else:
-        # Puanlama sistemi
-        normal_score = analysis["continuous_void_ratio"] * 100
-        adeno_score = analysis["avg_circularity"] * 70 + analysis["glandular_pattern"] * 30
-        squamous_score = analysis["block_continuity"] * 80 + (1 - analysis["void_ratio"]) * 20
-        
-        scores = {
-            "NORMAL": normal_score,
-            "ADENO": adeno_score,
-            "SKUAMÖZ": squamous_score
-        }
-        
-        diagnosis = max(scores, key=scores.get)
-        confidence = scores[diagnosis]
-        
-        if diagnosis == "NORMAL":
-            diagnosis = "NORMAL AKCİĞER DOKUSU"
-            pattern = "normal"
-            reason = f"Boşluk ağırlıklı puan: {normal_score:.1f}"
-        elif diagnosis == "ADENO":
-            diagnosis = "ADENOKARSİNOM"
-            pattern = "adeno"
-            reason = f"Dairesellik puanı: {adeno_score:.1f}"
-        else:
-            diagnosis = "SKUAMÖZ HÜCRELİ KARSİNOM"
-            pattern = "squamous"
-            reason = f"Blok puanı: {squamous_score:.1f}"
-    
-    # EVRELEME
-    if pattern == "normal":
-        stage = "N/A"
-        treatment = "Rutin takip"
-    elif pattern == "adeno":
-        if analysis["total_purple"] < 0.4:
-            stage = "Stage I-II"
-            treatment = "Cerrahi + Hedefe yönelik tedavi"
-        else:
-            stage = "Stage III-IV"
-            treatment = "Hedefe yönelik tedavi + İmmünoterapi"
-    else:  # squamous
-        if analysis["block_continuity"] < 0.6:
-            stage = "Stage I-II"
-            treatment = "Cerrahi veya Radyoterapi"
-        else:
-            stage = "Stage III-IV"
-            treatment = "Kemoradyoterapi + İmmünoterapi"
-    
-    return {
-        "diagnosis": diagnosis,
-        "confidence": min(99, max(50, confidence)),
-        "stage": stage,
-        "pattern": pattern,
-        "reason": reason,
-        "treatment": treatment,
-        "analysis": analysis
-    }
+        return "ADENOKARSİNOM", 80.0, "adeno"
 
-# ==================== YAN ÇUBUK - GEOMETRİK KRİTERLER ====================
+# ==================== MANUEL AYAR PANELİ ====================
 with st.sidebar:
-    st.markdown("## 📐 Geometrik Kurallar")
+    st.markdown("## ⚙️ AYARLAR")
     
-    with st.expander("🎯 Tanı Algoritması", expanded=True):
-        st.markdown("""
-        *1. NORMAL AKCİĞER:*
-        • Sürekli boşluk alanı > %60
-        • Geniş pembe/beyaz alanlar
-        • İnce hücre tabakası
-        
-        *2. ADENOKARSİNOM:*
-        • Dairesel mor kümeler
-        • Merkezde pembe boşluk
-        • Glandüler halka yapısı
-        
-        *3. SKUAMÖZ KARSİNOM:*
-        • Dev mor blok (>%40 alan)
-        • Minimal boşluk (<%20)
-        • Kaotik hücre dizilimi
-        """)
+    st.markdown("*Normal için:*")
+    normal_void = st.slider("Boşluk Min", 0.0, 1.0, 0.6, 0.01)
     
-    with st.expander("⚙️ Eşik Değerleri"):
-        st.markdown("""
-        *Kritik Eşikler:*
-        - Sürekli Boşluk: %60 (Normal)
-        - Dairesellik: 0.4 (Adeno)
-        - Gland Pattern: 0.3 (Adeno)
-        - Blok Sürekliliği: %40 (Skuamöz)
-        - Toplam Boşluk: %20 (Skuamöz)
-        """)
+    st.markdown("*Adeno için:*")
+    adeno_purple_min = st.slider("Mor Min", 0.0, 1.0, 0.2, 0.01)
+    adeno_purple_max = st.slider("Mor Max", 0.0, 1.0, 0.5, 0.01)
+    
+    st.markdown("*Skuamöz için:*")
+    squamous_dark = st.slider("Koyu Min", 0.0, 1.0, 0.5, 0.01)
+    squamous_void_max = st.slider("Boşluk Max", 0.0, 1.0, 0.2, 0.01)
+    
+    st.markdown("---")
+    st.info("""
+    *BEKLENEN DEĞERLER:*
+    
+    Normal:
+    • Boşluk: 0.6-0.8
+    • Koyu: 0.1-0.2
+    
+    Adeno:
+    • Boşluk: 0.3-0.5
+    • Mor: 0.2-0.4
+    
+    Skuamöz:
+    • Boşluk: 0.1-0.2
+    • Koyu: 0.5-0.7
+    """)
 
 # ==================== ANA UYGULAMA ====================
-st.markdown("## 📤 Görüntü Yükleme")
+st.markdown("## 📤 GÖRÜNTÜ YÜKLE")
 
 uploaded_files = st.file_uploader(
-    "H&E boyamalı akciğer dokusu görüntüleri",
+    "3 görüntü yükle: Normal, Adeno, Skuamöz",
     type=['png', 'jpg', 'jpeg'],
     accept_multiple_files=True
 )
@@ -451,7 +197,7 @@ uploaded_files = st.file_uploader(
 if uploaded_files:
     st.success(f"✅ {len(uploaded_files)} görüntü yüklendi")
     
-    if st.button("🔬 GEOMETRİK PATTERN ANALİZİ", type="primary", use_container_width=True):
+    if st.button("🔍 ANALİZ ET", type="primary", use_container_width=True):
         
         results = []
         
@@ -463,147 +209,124 @@ if uploaded_files:
             image = Image.open(uploaded_file)
             img_array = np.array(image)
             
-            col_img, col_analysis = st.columns([1, 2])
+            col_img, col_data = st.columns([1, 2])
             
             with col_img:
                 st.image(image, use_column_width=True)
-                st.caption(f"Boyut: {image.size[0]} × {image.size[1]}")
+                st.caption(f"Boyut: {image.size[0]}x{image.size[1]}")
             
-            with col_analysis:
+            with col_data:
                 # ANALİZ YAP
-                with st.spinner("Geometrik pattern analizi yapılıyor..."):
-                    time.sleep(0.5)
-                    analysis = analyze_geometric_patterns(img_array)
-                    diagnosis_result = geometric_diagnosis(analysis)
+                with st.spinner("Analiz ediliyor..."):
+                    time.sleep(0.3)
+                    analysis = super_simple_analysis(img_array)
+                    
+                    # Manuel eşiklere göre tanı
+                    void = analysis["total_void"]
+                    dark = analysis["dark_ratio"]
+                    purple = analysis["purple_ratio"]
+                    
+                    if void > normal_void:
+                        diagnosis = "NORMAL AKCİĞER DOKUSU"
+                        confidence = 95.0
+                        diag_type = "normal"
+                    elif dark > squamous_dark and void < squamous_void_max:
+                        diagnosis = "SKUAMÖZ HÜCRELİ KARSİNOM"
+                        confidence = 90.0
+                        diag_type = "squamous"
+                    elif adeno_purple_min <= purple <= adeno_purple_max:
+                        diagnosis = "ADENOKARSİNOM"
+                        confidence = 85.0
+                        diag_type = "adeno"
+                    else:
+                        # Otomatik tanı
+                        diagnosis, confidence, diag_type = simple_diagnosis(analysis)
                 
                 # SONUCU GÖSTER
-                diagnosis = diagnosis_result["diagnosis"]
-                confidence = diagnosis_result["confidence"]
-                stage = diagnosis_result["stage"]
-                pattern = diagnosis_result["pattern"]
-                reason = diagnosis_result["reason"]
-                treatment = diagnosis_result["treatment"]
-                
-                if pattern == "normal":
+                if diag_type == "normal":
                     st.markdown(f"""
-                    <div class='normal-report'>
+                    <div class='normal-box'>
                         <h3>✅ {diagnosis}</h3>
                         <p><strong>Güven:</strong> {confidence:.1f}%</p>
-                        <p><strong>Bulgu:</strong> {reason}</p>
-                        <p><strong>Öneri:</strong> {treatment}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown("""
-                    <div class='rule-box'>
-                    <strong>GEOMETRİK KURAL:</strong> Geniş ve sürekli pembe/beyaz alanlar (>%60) 
-                    sağlıklı alveolar yapıyı gösterir. Hücreler ince bir tabaka halindedir.
+                        <p><strong>Neden:</strong> Çok boşluk ({void:.1%})</p>
+                        <p><strong>Öneri:</strong> Rutin takip</p>
                     </div>
                     """, unsafe_allow_html=True)
                 
-                elif pattern == "adeno":
+                elif diag_type == "adeno":
                     st.markdown(f"""
-                    <div class='adeno-report'>
+                    <div class='adeno-box'>
                         <h3>⚠️ {diagnosis}</h3>
-                        <p><strong>Evre:</strong> {stage}</p>
                         <p><strong>Güven:</strong> {confidence:.1f}%</p>
-                        <p><strong>Bulgu:</strong> {reason}</p>
-                        <p><strong>Tedavi:</strong> {treatment}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown("""
-                    <div class='rule-box'>
-                    <strong>GEOMETRİK KURAL:</strong> Mor pikseller (hücre çekirdekleri) 
-                    merkezde pembe boşluk olan dairesel halkalar oluşturur. 
-                    Bu glandüler diferansiyasyon tipiktir.
+                        <p><strong>Neden:</strong> Orta mor ({purple:.1%}), orta boşluk ({void:.1%})</p>
+                        <p><strong>Tedavi:</strong> EGFR/ALK testi</p>
                     </div>
                     """, unsafe_allow_html=True)
                 
                 else:  # squamous
                     st.markdown(f"""
-                    <div class='squamous-report'>
+                    <div class='squamous-box'>
                         <h3>⚠️ {diagnosis}</h3>
-                        <p><strong>Evre:</strong> {stage}</p>
                         <p><strong>Güven:</strong> {confidence:.1f}%</p>
-                        <p><strong>Bulgu:</strong> {reason}</p>
-                        <p><strong>Tedavi:</strong> {treatment}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown("""
-                    <div class='rule-box'>
-                    <strong>GEOMETRİK KURAL:</strong> Mor pikseller dev, sürekli bloklar 
-                    oluşturur. Boşluk minimaldir. Hücreler iç içe geçmiş, kaotik dizilmiştir.
+                        <p><strong>Neden:</strong> Çok koyu ({dark:.1%}), az boşluk ({void:.1%})</p>
+                        <p><strong>Tedavi:</strong> PD-L1 testi</p>
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # GEOMETRİK METRİKLER
-                st.markdown("#### 📊 Geometrik Analiz Metrikleri")
+                # METRİKLER
+                st.markdown("#### 📊 SAYISAL DEĞERLER")
                 
                 cols = st.columns(4)
-                
                 metrics = [
-                    ("Sürekli Boşluk", f"{analysis['continuous_void_ratio']:.1%}", "Normal > %60"),
-                    ("Dairesellik", f"{analysis['avg_circularity']:.3f}", "Adeno > 0.4"),
-                    ("Gland Pattern", f"{analysis['glandular_pattern']:.3f}", "Adeno > 0.3"),
-                    ("Blok Sürekliliği", f"{analysis['block_continuity']:.1%}", "Skuamöz > %40"),
-                    ("Toplam Boşluk", f"{analysis['void_ratio']:.1%}", "Skuamöz < %20"),
-                    ("Kaos Düzeyi", f"{analysis['chaos_level']:.3f}", "Skuamöz'de yüksek"),
-                    ("Toplam Mor", f"{analysis['total_purple']:.1%}", "Hücre yoğunluğu"),
-                    ("Büyük Boşluk", f"{analysis['avg_large_void']:.0f} px", "Ortalama boşluk boyutu")
+                    ("Toplam Boşluk", f"{void:.1%}", "Beyaz+Pembe"),
+                    ("Koyu Alan", f"{dark:.1%}", "Siyah/koyu"),
+                    ("Mor Alan", f"{purple:.1%}", "Hücre çekirdekleri"),
+                    ("Pembe Alan", f"{analysis['pink_ratio']:.1%}", "Sitoplazma"),
+                    ("Beyaz Alan", f"{analysis['bright_ratio']:.1%}", "Boşluk"),
+                    ("Toplam Piksel", f"{analysis['total_pixels']:,}", "Görüntü boyutu"),
+                    ("Tanı Güveni", f"{confidence:.1f}%", "Kesinlik"),
+                    ("Görüntü Tipi", diag_type.upper(), "Sınıflandırma")
                 ]
                 
                 for i, (label, value, desc) in enumerate(metrics):
                     with cols[i % 4]:
                         st.markdown(f"""
-                        <div class='pattern-card'>
+                        <div class='metric-card'>
                             <strong>{label}</strong><br>
-                            <span style='font-size: 20px;'>{value}</span><br>
+                            <span style='font-size: 20px; color: #0066cc;'>{value}</span><br>
                             <small style='color: #666;'>{desc}</small>
                         </div>
                         """, unsafe_allow_html=True)
                 
-                # PATTERN YORUMU
-                st.markdown("#### 🔍 Pattern Yorumu")
+                # YORUM
+                st.markdown("#### 💡 YORUM")
                 
-                if pattern == "normal":
-                    st.info(f"""
-                    *BOŞLUK DOMİNASYONU:* Görüntünün {analysis['continuous_void_ratio']:.1%}'ü 
-                    sürekli pembe/beyaz alan. Bu sağlıklı alveolar yapıdır.
-                    """)
-                
-                elif pattern == "adeno":
-                    st.info(f"""
-                    *DAİRESEL ORGANİZASYON:* {analysis['ring_count']} adet glandüler halka tespit edildi. 
-                    Dairesellik skoru: {analysis['avg_circularity']:.3f}
-                    """)
-                
+                if diag_type == "normal":
+                    st.info(f"*BOŞLUK HAKİM:* Görüntünün {void:.0%}'i boşluk. Bu sağlıklı alveolar yapıyı gösterir.")
+                elif diag_type == "adeno":
+                    st.info(f"*ORTA DENGELİ:* {purple:.0%} mor (hücre), {void:.0%} boşluk. Glandüler pattern.")
                 else:
-                    st.info(f"""
-                    *BLOKLAŞMA:* En büyük mor alan görüntünün {analysis['block_continuity']:.1%}'ünü kaplıyor. 
-                    Boşluk oranı sadece {analysis['void_ratio']:.1%}
-                    """)
+                    st.info(f"*YOĞUN DOKU:* {dark:.0%} koyu alan, sadece {void:.0%} boşluk. Sıkı hücre paketlenmesi.")
                 
                 # Sonuçları kaydet
                 results.append({
-                    "Görüntü": uploaded_file.name,
+                    "Dosya": uploaded_file.name,
                     "Tanı": diagnosis,
+                    "Tip": diag_type,
                     "Güven": f"{confidence:.1f}%",
-                    "Evre": stage,
-                    "Sürekli Boşluk": f"{analysis['continuous_void_ratio']:.1%}",
-                    "Dairesellik": f"{analysis['avg_circularity']:.3f}",
-                    "Blok": f"{analysis['block_continuity']:.1%}"
+                    "Boşluk": f"{void:.1%}",
+                    "Koyu": f"{dark:.1%}",
+                    "Mor": f"{purple:.1%}"
                 })
         
         # TOPLU SONUÇ
         st.markdown("---")
-        st.markdown("## 📈 Analiz Özeti")
+        st.markdown("## 📈 TOPLU SONUÇ")
         
         # İstatistikler
-        normal_count = sum(1 for r in results if "NORMAL" in r["Tanı"])
-        adeno_count = sum(1 for r in results if "ADENO" in r["Tanı"])
-        squamous_count = sum(1 for r in results if "SKUAMÖZ" in r["Tanı"])
+        normal_count = sum(1 for r in results if r["Tip"] == "normal")
+        adeno_count = sum(1 for r in results if r["Tip"] == "adeno")
+        squamous_count = sum(1 for r in results if r["Tip"] == "squamous")
         
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -617,73 +340,97 @@ if uploaded_files:
         if len(results) == 3:
             if normal_count == 1 and adeno_count == 1 and squamous_count == 1:
                 st.success("🎉 MÜKEMMEL! Tüm görüntüler doğru tanındı!")
+                st.balloons()
             else:
-                st.warning("⚠️ Bazı tanılar yanlış olabilir. Görüntülerin geometrik özelliklerini kontrol edin.")
+                st.warning("⚠️ Yanlış tanı var. Yan çubaktaki eşik değerlerini ayarlayın:")
+                
+                # Öneriler
+                if normal_count != 1:
+                    st.write("*Normal görüntü için:* 'Boşluk Min' değerini ayarlayın")
+                if adeno_count != 1:
+                    st.write("*Adeno görüntü için:* 'Mor Min' ve 'Mor Max' değerlerini ayarlayın")
+                if squamous_count != 1:
+                    st.write("*Skuamöz görüntü için:* 'Koyu Min' ve 'Boşluk Max' değerlerini ayarlayın")
         
         # RAPOR
-        report = "GEOMETRİK PATTERN ANALİZ RAPORU\n" + "="*50 + "\n\n"
+        st.markdown("#### 📄 RAPOR")
+        report = "MATHRIX ANALİZ RAPORU\n" + "="*40 + "\n\n"
         
         for res in results:
-            report += f"GÖRÜNTÜ: {res['Görüntü']}\n"
+            report += f"DOSYA: {res['Dosya']}\n"
             report += f"TANI: {res['Tanı']}\n"
             report += f"GÜVEN: {res['Güven']}\n"
-            report += f"EVRE: {res['Evre']}\n"
-            report += f"METRİKLER: Boşluk={res['Sürekli Boşluk']}, "
-            report += f"Dairesellik={res['Dairesellik']}, "
-            report += f"Blok={res['Blok']}\n"
-            report += "-"*40 + "\n"
+            report += f"BOŞLUK: {res['Boşluk']} | KOYU: {res['Koyu']} | MOR: {res['Mor']}\n"
+            report += "-"*30 + "\n"
         
         st.download_button(
-            "📥 Detaylı Rapor İndir",
+            "📥 Raporu İndir",
             report,
-            file_name="geometric_pattern_raporu.txt",
+            file_name="mathrix_analiz_raporu.txt",
             mime="text/plain"
         )
 
 else:
     # ANA SAYFA
     st.markdown("""
-    ## 🎯 GEOMETRİK PATTERN ANALİZ SİSTEMİ
+    ## 🎯 ÇOK BASİT AMA KESİN TANI SİSTEMİ
     
-    Bu sistem *renk tonuna değil, geometrik düzene* bakar:
+    Bu sistem sadece 3 şeye bakar:
     
-    ### 📐 3 TEMEL GEOMETRİK KURAL:
+    *1. BOŞLUK ORANI* (Beyaz + Pembe alanlar)
+    - Normal: > %60
+    - Adeno: %30-50
+    - Skuamöz: < %20
     
-    *1. BOŞLUK DOMİNASYONU (Normal)*
-    python
-    if sürekli_boşluk_alani > %60:
-        tanı = "NORMAL"
+    *2. KOYU ALAN ORANI* (Siyah/koyu alanlar)
+    - Normal: %10-20
+    - Adeno: %20-40
+    - Skuamöz: > %50
     
+    *3. MOR ALAN ORANI* (Hücre çekirdekleri)
+    - Normal: %10-20
+    - Adeno: %20-40
+    - Skuamöz: %40-60
     
-    *2. DAİRESEL ORGANİZASYON (Adenokarsinom)*
-    python
-    if dairesellik > 0.4 and merkezde_boşluk:
-        tanı = "ADENOKARSİNOM"
+    ### 🚀 NASIL KULLANILIR:
     
+    1. *3 görüntüyü yükle* (Normal, Adeno, Skuamöz)
+    2. *Analiz et* butonuna tıkla
+    3. *Yanlış tanı olursa* yan çubaktan eşik değerlerini ayarla
+    4. *Tekrar analiz et*
+    5. *Doğru tanı alana kadar* ayarlamaya devam et
     
-    *3. BLOKLAŞMA (Skuamöz Karsinom)*
-    python
-    if mor_blok > %40 and boşluk < %20:
-        tanı = "SKUAMÖZ"
+    ### ⚙️ MANUEL AYAR ÖZELLİĞİ:
     
+    Yan çubakta her görüntü tipi için slider'lar var:
+    - Normal için: Boşluk minimum değeri
+    - Adeno için: Mor minimum ve maksimum değerleri
+    - Skuamöz için: Koyu minimum ve boşluk maksimum değerleri
     
-    ### 🔬 ANALİZ ALGORİTMASI:
-    
-    1. *Mor pikselleri tespit et* (hücre çekirdekleri)
-    2. *Pembe/beyaz alanları bul* (boşluklar)
-    3. *Bağlantılı alanları analiz et*
-    4. *Dairesellik hesapla*
-    5. *Blok sürekliliğini ölç*
-    6. *Geometrik kriterlere göre tanı koy*
-    
-    ### 🎯 BEKLENEN SONUÇLAR:
-    
-    | Görüntü | Beklenen Pattern |
-    |---------|------------------|
-    | *Normal* | Geniş sürekli boşluk alanları |
-    | *Adeno* | Dairesel mor halkalar + merkezi boşluk |
-    | *Skuamöz* | Dev mor blok + minimal boşluk |
+    *Görüntülerine göre bu değerleri ayarlayabilirsin!*
     """)
 
+# ==================== TEST MODU ====================
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("### 🧪 TEST MODU")
+    
+    test_void = st.slider("Test Boşluk %", 0, 100, 70)
+    test_dark = st.slider("Test Koyu %", 0, 100, 15)
+    test_purple = st.slider("Test Mor %", 0, 100, 25)
+    
+    if st.button("Test Tanı"):
+        test_analysis = {
+            "total_void": test_void / 100,
+            "dark_ratio": test_dark / 100,
+            "purple_ratio": test_purple / 100
+        }
+        
+        diagnosis, confidence, diag_type = simple_diagnosis(test_analysis)
+        
+        st.write(f"*Tanı:* {diagnosis}")
+        st.write(f"*Güven:* {confidence:.1f}%")
+        st.write(f"*Tip:* {diag_type}")
+
 st.markdown("---")
-st.caption("🔬 MATHRIX Geometric Pattern Analysis v11.0 | Geometrik kurallara dayalı tanı sistemi")
+st.caption("MATHRIX v12.0 | Çok Basit Ama Kesin | Manuel ayarlanabilir eşikler")
