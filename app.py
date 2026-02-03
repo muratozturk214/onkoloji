@@ -2,11 +2,16 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import time
+import cv2
 import io
+from collections import deque
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, classification_report
 
 # ==================== SAYFA AYARLARI ====================
 st.set_page_config(
-    page_title="MATHRIX - Pathology AI",
+    page_title="MATHRIX - Geometric Pathology AI",
     page_icon="🔬",
     layout="wide"
 )
@@ -14,7 +19,6 @@ st.set_page_config(
 # ==================== CSS - PROFESYONEL RAPOR STİLİ ====================
 st.markdown("""
 <style>
-    /* Ana arka plan - açık gri rapor stili */
     .main {
         background-color: #f8f9fa;
     }
@@ -24,19 +28,16 @@ st.markdown("""
         color: #212529 !important;
     }
     
-    /* Tüm yazılar siyah olsun */
     p, div, span, label, .stMarkdown, .stText {
         color: #212529 !important;
     }
     
-    /* Başlıklar - mavi tonları */
     h1, h2, h3, h4, h5, h6 {
         color: #0d6efd !important;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 600;
     }
     
-    /* Beyaz kartlar - rapor gibi */
     .report-card {
         background-color: #ffffff !important;
         border: 1px solid #dee2e6 !important;
@@ -46,7 +47,6 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     
-    /* Normal sonuç kartı - yeşil */
     .normal-card {
         background-color: #d1e7dd !important;
         border: 2px solid #198754 !important;
@@ -57,7 +57,6 @@ st.markdown("""
         color: #0f5132 !important;
     }
     
-    /* Adenokarsinom kartı - mavi */
     .adeno-card {
         background-color: #cfe2ff !important;
         border: 2px solid #0d6efd !important;
@@ -68,7 +67,6 @@ st.markdown("""
         color: #052c65 !important;
     }
     
-    /* Skuamöz kartı - kırmızı */
     .squamous-card {
         background-color: #f8d7da !important;
         border: 2px solid #dc3545 !important;
@@ -79,7 +77,6 @@ st.markdown("""
         color: #842029 !important;
     }
     
-    /* Metrik kartları */
     .metric-card {
         background-color: #ffffff !important;
         border: 1px solid #dee2e6 !important;
@@ -89,540 +86,427 @@ st.markdown("""
         margin: 10px;
         box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
-    
-    .metric-card h4 {
-        color: #495057 !important;
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 8px;
-    }
-    
-    .metric-card h3 {
-        color: #0d6efd !important;
-        font-size: 24px;
-        font-weight: 700;
-        margin: 5px 0;
-    }
-    
-    /* Sidebar */
-    .css-1d391kg {
-        background-color: #f8f9fa !important;
-        border-right: 1px solid #dee2e6 !important;
-    }
-    
-    /* Butonlar */
-    .stButton button {
-        background: linear-gradient(90deg, #0d6efd, #0a58ca) !important;
-        color: white !important;
-        border: none !important;
-        font-weight: 600 !important;
-        border-radius: 6px !important;
-        padding: 10px 24px !important;
-    }
-    
-    /* File uploader */
-    .stFileUploader {
-        background-color: #ffffff !important;
-        border: 2px dashed #adb5bd !important;
-        border-radius: 10px !important;
-    }
-    
-    /* Progress bar */
-    .stProgress > div > div > div > div {
-        background-color: #0d6efd !important;
-    }
-    
-    /* Expander */
-    .streamlit-expanderHeader {
-        background-color: #e9ecef !important;
-        color: #212529 !important;
-        font-weight: 600 !important;
-        border-radius: 6px !important;
-    }
-    
-    /* Tablo */
-    .dataframe {
-        background-color: #ffffff !important;
-        color: #212529 !important;
-        border: 1px solid #dee2e6 !important;
-    }
-    
-    .dataframe th {
-        background-color: #e9ecef !important;
-        color: #212529 !important;
-        font-weight: 600 !important;
-    }
-    
-    /* Matematik değerleri için özel stilleme */
-    .math-value-good {
-        color: #198754 !important;
-        font-weight: 600;
-    }
-    
-    .math-value-warning {
-        color: #fd7e14 !important;
-        font-weight: 600;
-    }
-    
-    .math-value-danger {
-        color: #dc3545 !important;
-        font-weight: 600;
-    }
-    
-    /* Bilgi paneli */
-    .info-panel {
-        background-color: #e7f1ff !important;
-        border: 1px solid #b6d4fe !important;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 15px 0;
-        color: #084298 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==================== BAŞLIK ====================
 st.markdown("""
 <div class='report-card' style='text-align: center;'>
-    <h1>🔬 MATHRIX PATHOLOGY ANALYSIS SYSTEM</h1>
-    <h4>Advanced Microscopic Image Analysis for Lung Cancer Diagnosis</h4>
-    <p style='color: #6c757d !important;'>Version 8.0 | Clinical Grade Analysis Engine</p>
+    <h1>🔬 MATHRIX - GEOMETRIC PATHOLOGY ANALYSIS</h1>
+    <h4>Structure-Based Lung Tissue Classification (Color-Blind Architecture)</h4>
+    <p style='color: #6c757d !important;'>Version 9.0 | Geometric & Topological Analysis Engine</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ==================== MİKROSKOPİK GÖRÜNTÜ ANALİZ FONKSİYONLARI ====================
-def analyze_microscopic_image(image_array):
+# ==================== YENİ ANALİZ FONKSİYONLARI ====================
+def preprocess_image_color_blind(image_array):
     """
-    Mikroskopik görüntüyü analiz et
-    Gerçek histopatolojik kriterlere göre
+    Renk körü ön işleme: Görüntüyü yapısal analiz için hazırla
     """
-    # Gri tonlamaya çevir
+    # 1. Gri tonlamaya çevir (renk bilgisini atmak için)
     if len(image_array.shape) == 3:
-        # RGB'den gri tonlamaya
-        gray = np.mean(image_array, axis=2).astype(np.float32)
+        gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
     else:
-        gray = image_array.astype(np.float32)
+        gray = image_array
     
-    # Normalize et (0-1 arası)
-    gray_norm = gray / 255.0
+    # 2. CLAHE ile kontrast sınırlı adaptif histogram eşitleme
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    gray_clahe = clahe.apply(gray)
     
-    # 1. TEMEL İSTATİSTİKLER
-    mean_intensity = np.mean(gray_norm)
-    std_intensity = np.std(gray_norm)
-    median_intensity = np.median(gray_norm)
+    # 3. Gaussian blur ile gürültüyü azalt
+    blurred = cv2.GaussianBlur(gray_clahe, (5, 5), 0)
     
-    # 2. DOKU ANALİZİ
-    # Gradient hesapla (kenar tespiti)
-    grad_x = np.gradient(gray_norm, axis=1)
-    grad_y = np.gradient(gray_norm, axis=0)
-    gradient_magnitude = np.sqrt(grad_x*2 + grad_y*2)
+    # 4. Sobel kenar tespiti
+    sobelx = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=3)
+    sobel_magnitude = np.sqrt(sobelx*2 + sobely*2)
+    sobel_magnitude = np.uint8(sobel_magnitude / sobel_magnitude.max() * 255)
     
-    # Doku homojenitesi
-    homogeneity = 1.0 / (1.0 + np.mean(gradient_magnitude))
+    # 5. Binary threshold (Otsu)
+    _, binary = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     
-    # Doku kontrastı
-    contrast = np.var(gray_norm)
-    
-    # 3. HÜCRE YOĞUNLUĞU ANALİZİ
-    # Threshold belirle (Otsu benzeri)
-    hist, bins = np.histogram(gray.flatten(), bins=256, range=(0, 255))
-    
-    # Hücreler genellikle koyu renkte (nükleus koyu)
-    # 0-100 arası piksel sayısı (koyu alanlar)
-    dark_pixels = np.sum(gray < 100)
-    total_pixels = gray.size
-    
-    cellular_density = dark_pixels / total_pixels
-    
-    # 4. BOŞLUK ANALİZİ (VOID)
-    # Açık alanlar (150-255) boşlukları temsil eder
-    void_pixels = np.sum(gray > 150)
-    void_percentage = void_pixels / total_pixels
-    
-    # 5. NÜKLEER PLEOMORFİZM (çekirdek düzensizliği)
-    # Yüksek standart sapma = yüksek pleomorfizm
-    nuclear_pleomorphism = std_intensity * 10
-    
-    # 6. MİTOZ SAYISI (simüle)
-    # Parlak noktalar mitoz olabilir
-    bright_spots = np.sum(gray > 200)
-    mitotic_count = int(bright_spots / 1000)  # Normalize
-    
-    # 7. PATTERN ANALİZİ
-    # Düzenlilik ölçümü
-    regularity_score = 1.0 - (std_intensity / mean_intensity if mean_intensity > 0 else 0)
-    
-    # Kümeleme analizi (basit)
-    from collections import deque
-    
-    def find_clusters(binary_matrix, min_size=10):
-        """İkili matriste kümeleri bul"""
-        visited = np.zeros_like(binary_matrix, dtype=bool)
-        clusters = []
-        
-        for i in range(binary_matrix.shape[0]):
-            for j in range(binary_matrix.shape[1]):
-                if binary_matrix[i, j] and not visited[i, j]:
-                    cluster = []
-                    queue = deque([(i, j)])
-                    
-                    while queue:
-                        x, y = queue.popleft()
-                        if 0 <= x < binary_matrix.shape[0] and 0 <= y < binary_matrix.shape[1]:
-                            if binary_matrix[x, y] and not visited[x, y]:
-                                visited[x, y] = True
-                                cluster.append((x, y))
-                                queue.extend([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
-                    
-                    if len(cluster) >= min_size:
-                        clusters.append(cluster)
-        
-        return clusters
-    
-    # Hücre kümelerini bul (koyu alanlar)
-    cell_mask = gray < 100
-    cell_clusters = find_clusters(cell_mask, min_size=5)
-    
-    # Küme boyutlarının varyansı
-    if cell_clusters:
-        cluster_sizes = [len(c) for c in cell_clusters]
-        cluster_size_variance = np.var(cluster_sizes) if len(cluster_sizes) > 1 else 0
-        avg_cluster_size = np.mean(cluster_sizes)
-    else:
-        cluster_size_variance = 0
-        avg_cluster_size = 0
-    
-    # 8. ENTROPI (bilgi karmaşıklığı)
-    hist_norm, _ = np.histogram(gray_norm.flatten(), bins=64, range=(0, 1))
-    prob = hist_norm / hist_norm.sum()
-    prob = prob[prob > 0]
-    entropy = -np.sum(prob * np.log2(prob))
+    # 6. Morfolojik işlemler
+    kernel = np.ones((3, 3), np.uint8)
+    opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+    closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)
     
     return {
-        # Temel istatistikler
-        "mean_intensity": mean_intensity,
-        "std_intensity": std_intensity,
-        "median_intensity": median_intensity,
-        
-        # Doku analizi
-        "homogeneity": homogeneity,
-        "contrast": contrast,
-        "regularity": regularity_score,
-        
-        # Hücresel özellikler
-        "cellular_density": cellular_density,
-        "void_percentage": void_percentage,
-        "nuclear_pleomorphism": nuclear_pleomorphism,
-        "mitotic_count": mitotic_count,
-        
-        # Pattern analizi
-        "num_clusters": len(cell_clusters),
-        "avg_cluster_size": avg_cluster_size,
-        "cluster_variance": cluster_size_variance,
-        
-        # Bilgi teorisi
-        "entropy": entropy,
-        
-        # Görüntü boyutları
-        "image_width": gray.shape[1],
-        "image_height": gray.shape[0],
-        "total_pixels": total_pixels
+        'gray': gray,
+        'clahe': gray_clahe,
+        'blurred': blurred,
+        'sobel': sobel_magnitude,
+        'binary': binary,
+        'morph': closed
     }
 
-def diagnose_from_microscopic_analysis(analysis):
+def calculate_geometric_features(preprocessed):
     """
-    Mikroskopik analize göre tanı koy
-    Gerçek patolojik kriterlere göre
+    Geometrik ve topolojik özellikleri hesapla
     """
-    # KRİTERLERİ ÇIKAR
-    density = analysis["cellular_density"]
-    voids = analysis["void_percentage"]
-    pleomorphism = analysis["nuclear_pleomorphism"]
-    mitotic = analysis["mitotic_count"]
-    homogeneity = analysis["homogeneity"]
-    contrast = analysis["contrast"]
-    regularity = analysis["regularity"]
-    entropy = analysis["entropy"]
-    cluster_var = analysis["cluster_variance"]
+    binary = preprocessed['binary']
+    gray = preprocessed['gray']
     
-    # 1. ÖNCE NORMAL Mİ BAKALIM
-    # Normal akciğer dokusu:
-    # - Düşük hücre yoğunluğu (0.1-0.3)
-    # - Yüksek homojenite (>0.7)
-    # - Düşük kontrast (<0.05)
-    # - Düşük mitoz (<2)
-    # - Yüksek düzenlilik (>0.8)
-    
-    is_normal = (
-        density < 0.3 and
-        homogeneity > 0.7 and
-        contrast < 0.05 and
-        mitotic < 2 and
-        regularity > 0.8 and
-        entropy < 3.0
-    )
-    
-    if is_normal:
-        diagnosis = "NORMAL LUNG TISSUE"
-        confidence = (
-            (1 - min(density * 3, 1)) * 0.2 +
-            homogeneity * 0.3 +
-            regularity * 0.3 +
-            (1 - min(entropy / 5, 1)) * 0.2
-        ) * 100
-        confidence = min(98, max(85, confidence))
-        stage = "N/A"
+    # 1. LACUNARITY (Boşlukluluk) - Normal doku için
+    def calculate_lacunarity(binary_image, box_sizes=[2, 4, 8, 16]):
+        """Lacunarity hesapla: yüksek değer = daha boşluklu"""
+        lacunarities = []
+        for box_size in box_sizes:
+            if box_size >= min(binary_image.shape):
+                continue
+            
+            # Sliding window
+            lac = []
+            for i in range(0, binary_image.shape[0] - box_size, box_size//2):
+                for j in range(0, binary_image.shape[1] - box_size, box_size//2):
+                    window = binary_image[i:i+box_size, j:j+box_size]
+                    if window.size == 0:
+                        continue
+                    # Koyu piksellerin oranı
+                    dark_ratio = np.sum(window < 128) / window.size
+                    lac.append(dark_ratio)
+            
+            if lac:
+                mean_lac = np.mean(lac)
+                std_lac = np.std(lac)
+                lacunarity = std_lac / (mean_lac + 1e-10) if mean_lac > 0 else 0
+                lacunarities.append(lacunarity)
         
+        return np.mean(lacunarities) if lacunarities else 0
+    
+    lacunarity = calculate_lacunarity(binary)
+    
+    # 2. FRACTAL DIMENSION (Kendine benzerlik) - SCC için
+    def calculate_fractal_dimension(binary_image):
+        """Box-counting method ile fraktal boyut"""
+        sizes = [2, 4, 8, 16, 32, 64]
+        counts = []
+        
+        for size in sizes:
+            if size >= min(binary_image.shape):
+                continue
+            
+            # Grid üzerinde say
+            count = 0
+            for i in range(0, binary_image.shape[0], size):
+                for j in range(0, binary_image.shape[1], size):
+                    window = binary_image[i:min(i+size, binary_image.shape[0]), 
+                                         j:min(j+size, binary_image.shape[1])]
+                    if np.any(window < 128):  # Koyu pikseller varsa
+                        count += 1
+            counts.append(count)
+        
+        if len(counts) > 1:
+            # Log-log regression
+            sizes = sizes[:len(counts)]
+            coeffs = np.polyfit(np.log(sizes), np.log(counts), 1)
+            return -coeffs[0]  # Fractal dimension
+        return 1.0
+    
+    fractal_dim = calculate_fractal_dimension(binary)
+    
+    # 3. CIRCULARITY & LUMEN DETECTION (Adeno için)
+    def detect_circular_structures(binary_image):
+        """Dairesel yapıları tespit et (glandüler yapılar)"""
+        # Kontur bul
+        contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        circularities = []
+        lumen_areas = []
+        
+        for contour in contours:
+            if len(contour) < 5:
+                continue
+            
+            # Alan ve çevre
+            area = cv2.contourArea(contour)
+            perimeter = cv2.arcLength(contour, True)
+            
+            # Dairesellik
+            if perimeter > 0:
+                circularity = 4 * np.pi * area / (perimeter * perimeter)
+                circularities.append(circularity)
+            
+            # Minimum sınırlayıcı daire
+            (x, y), radius = cv2.minEnclosingCircle(contour)
+            circle_area = np.pi * radius * radius
+            
+            # Lümen oranı (iç boşluk)
+            if circle_area > 0:
+                lumen_ratio = area / circle_area
+                lumen_areas.append(lumen_ratio)
+        
+        avg_circularity = np.mean(circularities) if circularities else 0
+        avg_lumen_ratio = np.mean(lumen_areas) if lumen_areas else 0
+        num_circular = len([c for c in circularities if c > 0.7])  # Yüksek dairesellik
+        
+        return avg_circularity, avg_lumen_ratio, num_circular
+    
+    circularity, lumen_ratio, num_circular = detect_circular_structures(binary)
+    
+    # 4. VOID ANALYSIS (Boşluk analizi) - Normal için
+    def calculate_void_percentage(binary_image):
+        """Geniş, sürekli boşluk alanlarını bul"""
+        # Ters binary (boşluklar = beyaz)
+        inverted = 255 - binary_image
+        
+        # Bağlantılı bileşen analizi
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(inverted, connectivity=8)
+        
+        if num_labels > 1:
+            # En büyük boşluk alanlarını bul (top 5)
+            areas = stats[1:, cv2.CC_STAT_AREA]
+            if len(areas) > 0:
+                top_areas = np.sort(areas)[-min(5, len(areas)):]
+                total_void_area = np.sum(top_areas)
+                total_area = binary_image.shape[0] * binary_image.shape[1]
+                return total_void_area / total_area
+        
+        return 0
+    
+    void_percentage = calculate_void_percentage(binary)
+    
+    # 5. CELLULAR SOLIDITY (SCC için) - Katılık/kompaklık
+    def calculate_solidity(binary_image):
+        """Hücrelerin ne kadar sıkı paketlendiği"""
+        contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        solidities = []
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            hull = cv2.convexHull(contour)
+            hull_area = cv2.contourArea(hull)
+            
+            if hull_area > 0:
+                solidity = area / hull_area
+                solidities.append(solidity)
+        
+        return np.mean(solidities) if solidities else 0
+    
+    solidity = calculate_solidity(binary)
+    
+    # 6. TEXTURE ENTROPY (Doku karmaşıklığı)
+    def calculate_texture_entropy(gray_image):
+        """GLCM benzeri doku entropisi"""
+        from skimage.feature import graycomatrix, graycoprops
+        
+        # 8-bit quantization
+        gray_quantized = (gray_image // 32).astype(np.uint8)
+        
+        # GLCM hesapla
+        glcm = graycomatrix(gray_quantized, distances=[1], angles=[0], symmetric=True, normed=True)
+        
+        # Entropy
+        glcm_matrix = glcm[:, :, 0, 0]
+        glcm_matrix = glcm_matrix / np.sum(glcm_matrix)
+        entropy = -np.sum(glcm_matrix * np.log2(glcm_matrix + 1e-10))
+        
+        return entropy
+    
+    texture_entropy = calculate_texture_entropy(gray)
+    
+    # 7. NUCLEAR PLEOMORPHISM (Çekirdek düzensizliği)
+    def calculate_nuclear_variance(binary_image):
+        """Çekirdek boyutlarının varyansı"""
+        contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if len(contours) > 1:
+            areas = [cv2.contourArea(c) for c in contours]
+            return np.var(areas) / (np.mean(areas) + 1e-10)
+        return 0
+    
+    nuclear_variance = calculate_nuclear_variance(binary)
+    
+    return {
+        'lacunarity': lacunarity,
+        'fractal_dimension': fractal_dim,
+        'circularity': circularity,
+        'lumen_ratio': lumen_ratio,
+        'num_circular_structures': num_circular,
+        'void_percentage': void_percentage,
+        'solidity': solidity,
+        'texture_entropy': texture_entropy,
+        'nuclear_variance': nuclear_variance,
+        'total_cells': len(cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0])
+    }
+
+def structural_diagnosis(features):
+    """
+    Yapısal özelliklere göre tanı koy
+    """
+    # 1. NORMAL Mİ? (Geniş boşluklar, yüksek lacunarity)
+    if features['void_percentage'] > 0.6 and features['lacunarity'] > 0.8:
         return {
-            "diagnosis": diagnosis,
-            "confidence": confidence,
-            "stage": stage,
-            "key_findings": [
-                f"Low cellular density ({density:.3f})",
-                f"High tissue homogeneity ({homogeneity:.3f})",
-                f"Regular tissue pattern ({regularity:.3f})",
-                f"Low mitotic count ({mitotic})",
-                f"Minimal nuclear pleomorphism ({pleomorphism:.2f})"
-            ]
+            'diagnosis': 'NORMAL LUNG TISSUE',
+            'confidence': min(95, 85 + features['void_percentage'] * 15),
+            'stage': 'N/A',
+            'reasoning': f"High void percentage ({features['void_percentage']:.1%}) and lacunarity ({features['lacunarity']:.2f}) indicate healthy alveolar structure"
         }
     
-    # 2. KANSER VAR - HANGİ TİP?
+    # 2. ADENOCARCINOMA Mİ? (Dairesel yapılar, lumen)
+    adenocarcinoma_score = (
+        features['circularity'] * 2.0 +
+        features['lumen_ratio'] * 1.5 +
+        (features['num_circular_structures'] / 10) * 1.0 -
+        features['solidity'] * 0.5
+    )
     
-    # ADENOKARSİNOM KRİTERLERİ:
-    # - Orta yoğunluk (0.3-0.6)
-    # - Orta homojenite (0.4-0.7)
-    # - Glandüler pattern (düşük küme varyansı)
-    # - Orta mitoz (2-10)
-    # - Yuvarlak boşluklar (voids 0.1-0.3)
-    
-    # SKUAMÖZ KRİTERLERİ:
-    # - Yüksek yoğunluk (>0.6)
-    # - Düşük homojenite (<0.4)
-    # - Yüksek kontrast (>0.1)
-    # - Yüksek mitoz (>10)
-    # - Yüksek pleomorfizm (>3.0)
-    # - Yüksek küme varyansı (düzensiz kümeler)
-    
-    # Puanlama sistemi
-    adeno_score = 0
-    squamous_score = 0
-    
-    # Yoğunluk puanı
-    if 0.3 <= density <= 0.6:
-        adeno_score += 3
-    elif density > 0.6:
-        squamous_score += 3
-    
-    # Homojenite puanı
-    if 0.4 <= homogeneity <= 0.7:
-        adeno_score += 2
-    elif homogeneity < 0.4:
-        squamous_score += 2
-    
-    # Kontrast puanı
-    if contrast < 0.1:
-        adeno_score += 1
-    elif contrast > 0.1:
-        squamous_score += 1
-    
-    # Mitoz puanı
-    if 2 <= mitotic <= 10:
-        adeno_score += 2
-    elif mitotic > 10:
-        squamous_score += 3
-    
-    # Pleomorfizm puanı
-    if pleomorphism < 3.0:
-        adeno_score += 1
-    elif pleomorphism > 3.0:
-        squamous_score += 2
-    
-    # Küme varyansı (pattern düzensizliği)
-    if cluster_var < 1000:
-        adeno_score += 1  # Düzenli kümeler
-    elif cluster_var > 1000:
-        squamous_score += 2  # Düzensiz kümeler
-    
-    # Boşluklar (gland vs keratin)
-    if 0.1 <= voids <= 0.3:
-        adeno_score += 2  # Glandüler boşluklar
-    elif voids < 0.1:
-        squamous_score += 1  # Sıkı paketlenmiş
+    # 3. SQUAMOUS Mİ? (Yüksek solidity, fraktal boyut)
+    squamous_score = (
+        features['solidity'] * 2.0 +
+        features['fractal_dimension'] * 1.5 +
+        features['texture_entropy'] * 1.0 -
+        features['void_percentage'] * 2.0
+    )
     
     # KARAR
-    if adeno_score > squamous_score:
-        diagnosis = "ADENOCARCINOMA"
-        
+    if adenocarcinoma_score > squamous_score and adenocarcinoma_score > 1.5:
         # Evreleme
-        if mitotic <= 5 and pleomorphism < 2.0:
+        if features['nuclear_variance'] < 0.5:
             stage = "Stage I"
-        elif mitotic <= 10 and pleomorphism < 3.0:
+        elif features['nuclear_variance'] < 1.0:
             stage = "Stage II"
-        elif mitotic <= 15:
+        elif features['nuclear_variance'] < 2.0:
             stage = "Stage III"
         else:
             stage = "Stage IV"
         
-        confidence = (adeno_score / 12) * 100
-        confidence = min(95, max(70, confidence))
+        confidence = min(95, 70 + adenocarcinoma_score * 10)
         
-        key_findings = [
-            f"Moderate cellular density ({density:.3f})",
-            f"Glandular pattern suggested",
-            f"Mitotic count: {mitotic}",
-            f"Nuclear pleomorphism: {pleomorphism:.2f}",
-            f"Void percentage: {voids*100:.1f}% (glandular spaces)"
-        ]
-    
+        return {
+            'diagnosis': 'ADENOCARCINOMA',
+            'confidence': confidence,
+            'stage': stage,
+            'reasoning': f"Circular structures detected (circularity: {features['circularity']:.2f}, lumen ratio: {features['lumen_ratio']:.2f})",
+            'scores': {
+                'adenocarcinoma': adenocarcinoma_score,
+                'squamous': squamous_score
+            }
+        }
     else:
-        diagnosis = "SQUAMOUS CELL CARCINOMA"
-        
         # Evreleme
-        if mitotic <= 15 and pleomorphism < 4.0:
+        if features['solidity'] < 0.8:
             stage = "Stage I-II"
-        elif mitotic <= 25:
+        elif features['solidity'] < 0.9:
             stage = "Stage III"
         else:
             stage = "Stage IV"
         
-        confidence = (squamous_score / 14) * 100
-        confidence = min(97, max(75, confidence))
+        confidence = min(95, 70 + squamous_score * 10)
         
-        key_findings = [
-            f"High cellular density ({density:.3f})",
-            f"High nuclear pleomorphism ({pleomorphism:.2f})",
-            f"High mitotic count: {mitotic}",
-            f"Low tissue homogeneity ({homogeneity:.3f})",
-            f"Keratinization pattern suggested"
-        ]
-    
-    return {
-        "diagnosis": diagnosis,
-        "confidence": confidence,
-        "stage": stage,
-        "key_findings": key_findings,
-        "adeno_score": adeno_score,
-        "squamous_score": squamous_score
-    }
+        return {
+            'diagnosis': 'SQUAMOUS CELL CARCINOMA',
+            'confidence': confidence,
+            'stage': stage,
+            'reasoning': f"High cellular solidity ({features['solidity']:.2f}) and fractal dimension ({features['fractal_dimension']:.2f})",
+            'scores': {
+                'adenocarcinoma': adenocarcinoma_score,
+                'squamous': squamous_score
+            }
+        }
 
-# ==================== YAN ÇUBUK - PATOLOJİ REHBERİ ====================
+# ==================== YAN ÇUBUK ====================
 with st.sidebar:
-    st.markdown("## 📚 Pathology Guide")
+    st.markdown("## 🧠 Geometric Analysis Guide")
     
-    with st.expander("🔬 Microscopic Features", expanded=True):
+    with st.expander("📐 Structural Features", expanded=True):
         st.markdown("""
-        *NORMAL LUNG:*
-        • Uniform alveolar structure
-        • Regular cell spacing
-        • Low cellular density
-        • Minimal nuclear atypia
+        *NORMAL (Dantel):*
+        • High Lacunarity (>0.8)
+        • High Void Percentage (>60%)
+        • Low Fractal Dimension (<1.3)
         
-        *ADENOCARCINOMA:*
-        • Gland formation
-        • Mucin production
-        • Medium cellular density
-        • Round nuclei
+        *ADENOCARCINOMA (Halka):*
+        • High Circularity (>0.7)
+        • Lumen Detection
+        • Medium Solidty (0.4-0.7)
         
-        *SQUAMOUS CELL:*
-        • Keratin pearls
-        • Intercellular bridges
-        • High cellular density
-        • Irregular nuclei
+        *SQUAMOUS (Mozaik):*
+        • High Solidity (>0.8)
+        • High Fractal Dimension (>1.5)
+        • Low Void Percentage (<20%)
         """)
     
-    with st.expander("📊 Analysis Parameters"):
+    with st.expander("🔍 Analysis Pipeline"):
         st.markdown("""
-        *CELLULAR DENSITY:*
-        • Normal: < 0.3
-        • Adenocarcinoma: 0.3-0.6
-        • Squamous: > 0.6
-        
-        *HOMOGENEITY:*
-        • Normal: > 0.7
-        • Adenocarcinoma: 0.4-0.7
-        • Squamous: < 0.4
-        
-        *MITOTIC COUNT:*
-        • Normal: 0-1
-        • Adenocarcinoma: 2-10
-        • Squamous: > 10
-        """)
-    
-    with st.expander("💡 Analysis Tips"):
-        st.markdown("""
-        1. Upload clear H&E stained images
-        2. Ensure proper magnification (10x-40x)
-        3. Include tissue margins if possible
-        4. Multiple images give better accuracy
-        5. System analyzes: cellularity, pattern, mitosis
+        1. *Color-Blind Conversion:* RGB → Grayscale
+        2. *Contrast Enhancement:* CLAHE
+        3. *Edge Detection:* Sobel Filter
+        4. *Morphological Processing*
+        5. *Geometric Feature Extraction*
+        6. **Topological Pattern Recognition
         """)
 
 # ==================== ANA UYGULAMA ====================
 st.markdown("## 📤 Upload Microscopic Images")
 
 uploaded_files = st.file_uploader(
-    "Upload H&E stained lung tissue microscopic images",
+    "Upload H&E stained lung tissue images",
     type=['png', 'jpg', 'jpeg', 'tiff', 'bmp'],
-    accept_multiple_files=True,
-    help="Upload microscopic images at 10x-40x magnification"
+    accept_multiple_files=True
 )
 
 if uploaded_files:
-    st.success(f"✅ {len(uploaded_files)} microscopic image(s) loaded")
+    st.success(f"✅ {len(uploaded_files)} image(s) loaded")
     
-    if st.button("🔬 START PATHOLOGY ANALYSIS", type="primary", use_container_width=True):
+    if st.button("🔍 PERFORM STRUCTURAL ANALYSIS", type="primary", use_container_width=True):
         
         all_results = []
+        all_predictions = []
+        all_true_labels = []  # Manuel etiketleme için
         
         for idx, uploaded_file in enumerate(uploaded_files):
-            # Progress
             progress = (idx + 1) / len(uploaded_files)
-            st.progress(progress, text=f"Analyzing microscopic image {idx + 1} of {len(uploaded_files)}")
+            st.progress(progress, text=f"Analyzing structure of image {idx + 1}/{len(uploaded_files)}")
             
             # Görüntüyü aç
             image = Image.open(uploaded_file)
             image_array = np.array(image)
             
-            # Hasta/Örnek ID
-            sample_id = f"SP-{1000 + idx:04d}"
+            sample_id = f"GS-{1000 + idx:04d}"
             
-            st.markdown(f"### 📋 Sample Analysis: {sample_id}")
+            st.markdown(f"### 📋 Structural Analysis: {sample_id}")
             
-            col_img, col_analysis = st.columns([1, 2])
+            col1, col2 = st.columns([1, 2])
             
-            with col_img:
-                st.markdown("#### 🔍 Microscopic Image")
+            with col1:
+                st.markdown("#### 🔬 Original Image")
                 st.image(image, caption=f"Sample: {sample_id}", use_column_width=True)
                 
-                # Görüntü bilgileri
-                st.markdown("*Image Details:*")
-                st.write(f"• Dimensions: {image.size[0]} × {image.size[1]} px")
-                st.write(f"• Mode: {image.mode}")
-                st.write(f"• File: {uploaded_file.name}")
-            
-            with col_analysis:
-                # ANALİZ BAŞLAT
-                with st.spinner("Performing microscopic analysis..."):
-                    time.sleep(0.5)  # Simüle edilmiş işlem
-                    
-                    # MİKROSKOPİK ANALİZ
-                    analysis_results = analyze_microscopic_image(image_array)
-                    
-                    # TANI
-                    diagnosis_results = diagnose_from_microscopic_analysis(analysis_results)
+                # Manuel etiketleme (test için)
+                true_label = st.selectbox(
+                    f"Actual Diagnosis for {sample_id}",
+                    ["Select", "Normal", "Adenocarcinoma", "Squamous"],
+                    key=f"label_{idx}"
+                )
                 
-                # SONUÇLARI GÖSTER
-                diagnosis = diagnosis_results["diagnosis"]
-                confidence = diagnosis_results["confidence"]
-                stage = diagnosis_results["stage"]
+                if true_label != "Select":
+                    all_true_labels.append(true_label)
+            
+            with col2:
+                # ÖN İŞLEME
+                with st.spinner("Preprocessing (color-blind conversion)..."):
+                    preprocessed = preprocess_image_color_blind(image_array)
+                
+                # ÖZELLİK ÇIKARMA
+                with st.spinner("Extracting geometric features..."):
+                    features = calculate_geometric_features(preprocessed)
+                
+                # TANI
+                with st.spinner("Performing structural diagnosis..."):
+                    diagnosis_results = structural_diagnosis(features)
+                
+                # SONUÇ
+                diagnosis = diagnosis_results['diagnosis']
+                confidence = diagnosis_results['confidence']
+                stage = diagnosis_results['stage']
                 
                 if "NORMAL" in diagnosis:
                     st.markdown(f"""
                     <div class='normal-card'>
                         <h4>✅ {diagnosis}</h4>
-                        <p><strong>Confidence:</strong> {confidence:.1f}%</p>
-                        <p><strong>Clinical Interpretation:</strong> No evidence of malignancy detected</p>
-                        <p><strong>Recommendation:</strong> Routine clinical follow-up</p>
+                        <p><strong>Structural Confidence:</strong> {confidence:.1f}%</p>
+                        <p><strong>Key Geometric Feature:</strong> High Void Percentage</p>
+                        <p><strong>Pattern:</strong> Lace-like alveolar structure</p>
                     </div>
                     """, unsafe_allow_html=True)
                 
@@ -630,10 +514,9 @@ if uploaded_files:
                     st.markdown(f"""
                     <div class='adeno-card'>
                         <h4>⚠️ {diagnosis}</h4>
-                        <p><strong>Pathological Stage:</strong> {stage}</p>
-                        <p><strong>Confidence:</strong> {confidence:.1f}%</p>
-                        <p><strong>Clinical Action:</strong> Urgent oncology referral required</p>
-                        <p><strong>Next Steps:</strong> EGFR/ALK testing, surgical evaluation</p>
+                        <p><strong>Structural Stage:</strong> {stage}</p>
+                        <p><strong>Geometric Confidence:</strong> {confidence:.1f}%</p>
+                        <p><strong>Pattern:</strong> Circular glandular formations</p>
                     </div>
                     """, unsafe_allow_html=True)
                 
@@ -641,208 +524,197 @@ if uploaded_files:
                     st.markdown(f"""
                     <div class='squamous-card'>
                         <h4>⚠️ {diagnosis}</h4>
-                        <p><strong>Pathological Stage:</strong> {stage}</p>
-                        <p><strong>Confidence:</strong> {confidence:.1f}%</p>
-                        <p><strong>Clinical Action:</strong> Immediate multidisciplinary review</p>
-                        <p><strong>Next Steps:</strong> PD-L1 testing, chemoradiation planning</p>
+                        <p><strong>Structural Stage:</strong> {stage}</p>
+                        <p><strong>Geometric Confidence:</strong> {confidence:.1f}%</p>
+                        <p><strong>Pattern:</strong> Solid cellular mosaic</p>
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # ANAHTAR BULGULAR
-                st.markdown("#### 📋 Key Pathological Findings")
+                # GEOMETRİK ÖZELLİKLER
+                st.markdown("#### 📐 Geometric Feature Matrix")
                 
-                for finding in diagnosis_results.get("key_findings", []):
-                    st.markdown(f"• {finding}")
-                
-                # KANTİTATİF ANALİZ
-                st.markdown("#### 📊 Quantitative Microscopic Analysis")
-                
-                # Metrikler
-                metrics_data = [
-                    ("Cellular Density", f"{analysis_results['cellular_density']:.3f}", 
-                     "Normal" if analysis_results['cellular_density'] < 0.3 else 
-                     "Moderate" if analysis_results['cellular_density'] < 0.6 else "High"),
-                    
-                    ("Void Percentage", f"{analysis_results['void_percentage']*100:.1f}%",
-                     "Normal" if analysis_results['void_percentage'] < 0.1 else
-                     "Moderate" if analysis_results['void_percentage'] < 0.3 else "High"),
-                    
-                    ("Nuclear Pleomorphism", f"{analysis_results['nuclear_pleomorphism']:.2f}",
-                     "Low" if analysis_results['nuclear_pleomorphism'] < 2.0 else
-                     "Moderate" if analysis_results['nuclear_pleomorphism'] < 3.0 else "High"),
-                    
-                    ("Mitotic Count", str(analysis_results['mitotic_count']),
-                     "Normal" if analysis_results['mitotic_count'] < 2 else
-                     "Moderate" if analysis_results['mitotic_count'] < 10 else "High"),
-                    
-                    ("Tissue Homogeneity", f"{analysis_results['homogeneity']:.3f}",
-                     "High" if analysis_results['homogeneity'] > 0.7 else
-                     "Moderate" if analysis_results['homogeneity'] > 0.4 else "Low"),
-                    
-                    ("Pattern Regularity", f"{analysis_results['regularity']:.3f}",
-                     "Regular" if analysis_results['regularity'] > 0.8 else
-                     "Moderate" if analysis_results['regularity'] > 0.6 else "Irregular"),
-                    
-                    ("Image Entropy", f"{analysis_results['entropy']:.2f} bits",
-                     "Low" if analysis_results['entropy'] < 3.0 else
-                     "Moderate" if analysis_results['entropy'] < 5.0 else "High"),
-                    
-                    ("Cell Clusters", str(analysis_results['num_clusters']),
-                     "Few" if analysis_results['num_clusters'] < 10 else
-                     "Moderate" if analysis_results['num_clusters'] < 30 else "Many")
+                # Özelliklerin görselleştirilmesi
+                feature_data = [
+                    ("Lacunarity", features['lacunarity'], "Normal" if features['lacunarity'] > 0.7 else "Tumor"),
+                    ("Fractal Dimension", features['fractal_dimension'], "Squamous" if features['fractal_dimension'] > 1.4 else "Other"),
+                    ("Circularity", features['circularity'], "Adeno" if features['circularity'] > 0.6 else "Other"),
+                    ("Lumen Ratio", features['lumen_ratio'], "Adeno" if features['lumen_ratio'] > 0.3 else "Other"),
+                    ("Void %", features['void_percentage']*100, "Normal" if features['void_percentage'] > 0.6 else "Tumor"),
+                    ("Solidity", features['solidity']*100, "Squamous" if features['solidity'] > 0.7 else "Other"),
+                    ("Texture Entropy", features['texture_entropy'], "Complex" if features['texture_entropy'] > 3 else "Simple"),
+                    ("Nuclear Variance", features['nuclear_variance'], "High" if features['nuclear_variance'] > 0.5 else "Low")
                 ]
                 
-                # 4 sütun halinde göster
                 cols = st.columns(4)
-                for i, (label, value, status) in enumerate(metrics_data):
+                for i, (name, value, indicator) in enumerate(feature_data):
                     with cols[i % 4]:
-                        # Renk kodlama
-                        if "Normal" in status or "Low" in status or "High" in status and "Homogeneity" in label:
-                            value_color = "math-value-good"
-                        elif "Moderate" in status:
-                            value_color = "math-value-warning"
+                        # İndikatöre göre renk
+                        if "Normal" in indicator:
+                            color = "#198754"
+                        elif "Adeno" in indicator:
+                            color = "#0d6efd"
+                        elif "Squamous" in indicator:
+                            color = "#dc3545"
                         else:
-                            value_color = "math-value-danger"
+                            color = "#6c757d"
                         
                         st.markdown(f"""
                         <div class='metric-card'>
-                            <h4>{label}</h4>
-                            <h3 class='{value_color}'>{value}</h3>
-                            <p style='color: #6c757d !important; font-size: 0.9em;'>{status}</p>
+                            <h4>{name}</h4>
+                            <h3 style='color: {color};'>{value:.3f}</h3>
+                            <p style='color: #6c757d !important; font-size: 0.9em;'>{indicator}</p>
                         </div>
                         """, unsafe_allow_html=True)
                 
-                # İLAÇ ÖNERİLERİ (kanser varsa)
-                if "CARCINOMA" in diagnosis or "ADENO" in diagnosis:
-                    st.markdown("#### 💊 Targeted Therapy Recommendations")
-                    
-                    if "ADENOCARCINOMA" in diagnosis:
-                        st.markdown("""
-                        <div class='info-panel'>
-                        <strong>Based on Molecular Profile:</strong>
-                        1. <strong>EGFR mutation testing</strong> → Osimertinib if positive
-                        2. <strong>ALK rearrangement testing</strong> → Alectinib if positive
-                        3. <strong>ROS1 fusion testing</strong> → Crizotinib if positive
-                        4. <strong>PD-L1 expression</strong> → Pembrolizumab if >50%
-                        5. <strong>Surgical resection</strong> for Stage I-II disease
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    elif "SQUAMOUS" in diagnosis:
-                        st.markdown("""
-                        <div class='info-panel'>
-                        <strong>Based on NCCN Guidelines 2024:</strong>
-                        1. <strong>PD-L1 testing</strong> → Pembrolizumab + Chemotherapy
-                        2. <strong>Consider Nivolumab + Ipilimumab</strong> for high TMB
-                        3. <strong>Chemoradiation</strong> for locally advanced disease
-                        4. <strong>Palliative radiotherapy</strong> for symptomatic metastases
-                        5. <strong>Supportive care</strong> including pain management
-                        </div>
-                        """, unsafe_allow_html=True)
+                # GÖRSELLEŞTİRME
+                st.markdown("#### 🔍 Structural Visualization")
+                
+                viz_cols = st.columns(4)
+                with viz_cols[0]:
+                    st.image(preprocessed['clahe'], caption="CLAHE Enhanced", use_column_width=True)
+                with viz_cols[1]:
+                    st.image(preprocessed['sobel'], caption="Sobel Edges", use_column_width=True)
+                with viz_cols[2]:
+                    st.image(preprocessed['binary'], caption="Binary Mask", use_column_width=True)
+                with viz_cols[3]:
+                    # Kontur çizimi
+                    binary = preprocessed['binary']
+                    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    contour_img = cv2.cvtColor(binary, cv2.COLOR_GRAY2RGB)
+                    cv2.drawContours(contour_img, contours, -1, (0, 255, 0), 1)
+                    st.image(contour_img, caption="Detected Structures", use_column_width=True)
                 
                 # Sonuçları kaydet
                 all_results.append({
-                    "Sample": sample_id,
-                    "Diagnosis": diagnosis,
-                    "Confidence": f"{confidence:.1f}%",
-                    "Stage": stage,
-                    "Cellular Density": f"{analysis_results['cellular_density']:.3f}",
-                    "Mitotic Count": analysis_results['mitotic_count'],
-                    "File": uploaded_file.name[:30] + "..." if len(uploaded_file.name) > 30 else uploaded_file.name
+                    'Sample': sample_id,
+                    'Diagnosis': diagnosis,
+                    'Confidence': f"{confidence:.1f}%",
+                    'Stage': stage,
+                    'Lacunarity': f"{features['lacunarity']:.3f}",
+                    'Void %': f"{features['void_percentage']*100:.1f}%",
+                    'Circularity': f"{features['circularity']:.3f}",
+                    'Solidity': f"{features['solidity']*100:.1f}%"
                 })
+                
+                # Tahmini kaydet
+                pred_label = diagnosis.split()[0].upper()
+                if "NORMAL" in pred_label:
+                    all_predictions.append("Normal")
+                elif "ADENOCARCINOMA" in pred_label:
+                    all_predictions.append("Adenocarcinoma")
+                elif "SQUAMOUS" in pred_label:
+                    all_predictions.append("Squamous")
             
             st.markdown("---")
         
+        # PERFORMANS ANALİZİ (manuel etiketler varsa)
+        if len(all_true_labels) == len(all_predictions) and len(all_true_labels) > 0:
+            st.markdown("## 📊 Model Performance Analysis")
+            
+            # Confusion Matrix
+            st.markdown("#### 🎯 Confusion Matrix")
+            
+            # Etiketleri standartlaştır
+            labels = ["Normal", "Adenocarcinoma", "Squamous"]
+            
+            # Sadece seçilmiş etiketleri kullan
+            valid_indices = [i for i, label in enumerate(all_true_labels) if label in labels]
+            y_true = [all_true_labels[i] for i in valid_indices]
+            y_pred = [all_predictions[i] for i in valid_indices]
+            
+            if len(y_true) > 0:
+                cm = confusion_matrix(y_true, y_pred, labels=labels)
+                
+                fig, ax = plt.subplots(figsize=(8, 6))
+                sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                           xticklabels=labels, yticklabels=labels,
+                           ax=ax)
+                ax.set_xlabel('Predicted')
+                ax.set_ylabel('Actual')
+                ax.set_title('Confusion Matrix - Structural Analysis')
+                st.pyplot(fig)
+                
+                # Classification Report
+                st.markdown("#### 📈 Classification Report")
+                report = classification_report(y_true, y_pred, target_names=labels, output_dict=True)
+                
+                # Report'u tablo olarak göster
+                report_data = []
+                for label in labels:
+                    report_data.append({
+                        'Class': label,
+                        'Precision': f"{report[label]['precision']:.3f}",
+                        'Recall': f"{report[label]['recall']:.3f}",
+                        'F1-Score': f"{report[label]['f1-score']:.3f}",
+                        'Support': report[label]['support']
+                    })
+                
+                st.table(report_data)
+                
+                # Genel doğruluk
+                accuracy = report['accuracy']
+                st.metric("Overall Accuracy", f"{accuracy*100:.1f}%")
+        
         # TOPLU RAPOR
         if all_results:
-            st.markdown("## 📈 Batch Analysis Report")
+            st.markdown("## 📈 Batch Structural Analysis Report")
             
             # İstatistikler
-            st.markdown("#### 📊 Summary Statistics")
-            
-            col1, col2, col3, col4 = st.columns(4)
-            
             normal_count = len([r for r in all_results if "NORMAL" in r["Diagnosis"]])
             adeno_count = len([r for r in all_results if "ADENOCARCINOMA" in r["Diagnosis"]])
             squamous_count = len([r for r in all_results if "SQUAMOUS" in r["Diagnosis"]])
             
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Samples", len(all_results))
+                st.metric("Normal (Lace)", normal_count)
             with col2:
-                st.metric("Normal", normal_count, 
-                         delta=f"{(normal_count/len(all_results)*100):.1f}%" if all_results else "0%")
+                st.metric("Adeno (Ring)", adeno_count)
             with col3:
-                st.metric("Adenocarcinoma", adeno_count,
-                         delta=f"{(adeno_count/len(all_results)*100):.1f}%" if all_results else "0%")
-            with col4:
-                st.metric("Squamous", squamous_count,
-                         delta=f"{(squamous_count/len(all_results)*100):.1f}%" if all_results else "0%")
+                st.metric("Squamous (Mosaic)", squamous_count)
             
-            # Detaylı rapor
-            st.markdown("#### 📋 Detailed Analysis Report")
-            
-            # Rapor metni oluştur
+            # Rapor oluştur
             report_lines = []
-            report_lines.append("=" * 60)
-            report_lines.append("MATHRIX PATHOLOGY ANALYSIS REPORT")
-            report_lines.append("=" * 60)
-            report_lines.append(f"Report Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            report_lines.append(f"Total Samples Analyzed: {len(all_results)}")
-            report_lines.append("")
-            report_lines.append("SUMMARY:")
-            report_lines.append(f"  Normal Tissue: {normal_count} samples")
-            report_lines.append(f"  Adenocarcinoma: {adeno_count} samples")
-            report_lines.append(f"  Squamous Cell Carcinoma: {squamous_count} samples")
-            report_lines.append("")
-            report_lines.append("DETAILED FINDINGS:")
-            report_lines.append("-" * 40)
+            report_lines.append("=" * 70)
+            report_lines.append("MATHRIX GEOMETRIC PATHOLOGY REPORT")
+            report_lines.append("=" * 70)
+            report_lines.append(f"Analysis Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            report_lines.append(f"Total Samples: {len(all_results)}")
+            report_lines.append("\nSTRUCTURAL FINDINGS:")
+            report_lines.append("-" * 50)
             
             for result in all_results:
                 report_lines.append(f"\nSample: {result['Sample']}")
                 report_lines.append(f"Diagnosis: {result['Diagnosis']}")
-                report_lines.append(f"Confidence: {result['Confidence']}")
-                report_lines.append(f"Stage: {result['Stage']}")
-                report_lines.append(f"Cellular Density: {result['Cellular Density']}")
-                report_lines.append(f"Mitotic Count: {result['Mitotic Count']}")
-                report_lines.append(f"Image File: {result['File']}")
+                report_lines.append(f"Geometric Confidence: {result['Confidence']}")
+                report_lines.append(f"Lacunarity: {result['Lacunarity']}")
+                report_lines.append(f"Void Percentage: {result['Void %']}")
+                report_lines.append(f"Circularity: {result['Circularity']}")
+                report_lines.append(f"Solidity: {result['Solidity']}")
                 report_lines.append("-" * 30)
             
-            report_lines.append("\n" + "=" * 60)
-            report_lines.append("CLINICAL RECOMMENDATIONS:")
-            report_lines.append("=" * 60)
-            
-            if adeno_count > 0:
-                report_lines.append("\nFor Adenocarcinoma cases:")
-                report_lines.append("1. Perform EGFR, ALK, ROS1 molecular testing")
-                report_lines.append("2. Consider surgical resection for early stages")
-                report_lines.append("3. Targeted therapy based on mutation profile")
-            
-            if squamous_count > 0:
-                report_lines.append("\nFor Squamous Cell Carcinoma cases:")
-                report_lines.append("1. PD-L1 immunohistochemistry testing")
-                report_lines.append("2. Chemoradiation for locally advanced disease")
-                report_lines.append("3. Immunotherapy for metastatic disease")
+            report_lines.append("\n" + "=" * 70)
+            report_lines.append("GEOMETRIC INTERPRETATION:")
+            report_lines.append("=" * 70)
             
             if normal_count > 0:
-                report_lines.append("\nFor Normal Tissue cases:")
-                report_lines.append("1. Routine clinical follow-up")
-                report_lines.append("2. Consider risk factor modification")
-                report_lines.append("3. Annual screening if high-risk")
+                report_lines.append("\n• LACE PATTERN (Normal): High lacunarity and void percentage")
+                report_lines.append("  indicates preserved alveolar architecture.")
             
-            report_lines.append("\n" + "=" * 60)
-            report_lines.append("DISCLAIMER:")
-            report_lines.append("=" * 60)
-            report_lines.append("This report is generated by AI-assisted analysis system.")
-            report_lines.append("All findings must be confirmed by board-certified pathologist.")
-            report_lines.append("Treatment decisions require clinical correlation.")
+            if adeno_count > 0:
+                report_lines.append("\n• RING PATTERN (Adenocarcinoma): Circular structures")
+                report_lines.append("  suggest glandular differentiation with lumen formation.")
+            
+            if squamous_count > 0:
+                report_lines.append("\n• MOSAIC PATTERN (Squamous): High solidity and fractal")
+                report_lines.append("  dimension indicate tightly packed cellular sheets.")
             
             report_text = "\n".join(report_lines)
             
             # İndirme butonu
             st.download_button(
-                label="📄 Download Comprehensive Pathology Report",
+                label="📄 Download Geometric Analysis Report",
                 data=report_text,
-                file_name=f"pathology_report_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                file_name=f"geometric_report_{time.strftime('%Y%m%d_%H%M%S')}.txt",
                 mime="text/plain",
                 use_container_width=True
             )
@@ -851,82 +723,66 @@ else:
     # ANA SAYFA
     st.markdown("""
     <div class='report-card' style='text-align: center;'>
-        <h2>Welcome to MATHRIX Pathology Analysis System</h2>
+        <h2>Welcome to Geometric Pathology Analysis</h2>
         <p style='color: #6c757d !important; font-size: 1.1em;'>
-        Advanced microscopic image analysis for accurate lung cancer diagnosis
+        Color-blind analysis focusing on structural patterns rather than color
         </p>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    col_cap1, col_cap2, col_cap3 = st.columns(3)
+    # PATTERN AÇIKLAMALARI
+    col1, col2, col3 = st.columns(3)
     
-    with col_cap1:
+    with col1:
         st.markdown("""
-        <div class='metric-card'>
-            <div style='font-size: 36px; color: #0d6efd; margin-bottom: 10px;'>🔬</div>
-            <h4>Microscopic Analysis</h4>
-            <p style='color: #6c757d !important;'>Cellular density, mitosis, pleomorphism</p>
+        <div style='background: #d1e7dd; padding: 20px; border-radius: 10px; border-left: 6px solid #198754;'>
+            <h4>🔗 Lace Pattern (Normal)</h4>
+            <p><strong>Geometric Signature:</strong></p>
+            <ul style='text-align: left;'>
+                <li>High Lacunarity (>0.8)</li>
+                <li>Void Percentage > 60%</li>
+                <li>Low Fractal Dimension</li>
+            </ul>
+            <p>Delicate alveolar network</p>
         </div>
         """, unsafe_allow_html=True)
     
-    with col_cap2:
+    with col2:
         st.markdown("""
-        <div class='metric-card'>
-            <div style='font-size: 36px; color: #0d6efd; margin-bottom: 10px;'>🎯</div>
-            <h4>Accurate Classification</h4>
-            <p style='color: #6c757d !important;'>Normal vs Adenocarcinoma vs Squamous</p>
+        <div style='background: #cfe2ff; padding: 20px; border-radius: 10px; border-left: 6px solid #0d6efd;'>
+            <h4>⭕ Ring Pattern (Adeno)</h4>
+            <p><strong>Geometric Signature:</strong></p>
+            <ul style='text-align: left;'>
+                <li>High Circularity (>0.7)</li>
+                <li>Lumen Detection</li>
+                <li>Medium Solidity</li>
+            </ul>
+            <p>Glandular formations</p>
         </div>
         """, unsafe_allow_html=True)
     
-    with col_cap3:
+    with col3:
         st.markdown("""
-        <div class='metric-card'>
-            <div style='font-size: 36px; color: #0d6efd; margin-bottom: 10px;'>📋</div>
-            <h4>Comprehensive Reporting</h4>
-            <p style='color: #6c757d !important;'>Detailed findings and recommendations</p>
+        <div style='background: #f8d7da; padding: 20px; border-radius: 10px; border-left: 6px solid #dc3545;'>
+            <h4>🧱 Mosaic Pattern (Squamous)</h4>
+            <p><strong>Geometric Signature:</strong></p>
+            <ul style='text-align: left;'>
+                <li>High Solidity (>0.8)</li>
+                <li>High Fractal Dimension</li>
+                <li>Low Void Percentage</li>
+            </ul>
+            <p>Tight cellular sheets</p>
         </div>
         """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    st.markdown("""
-    <div class='info-panel'>
-    <h5>📋 System Capabilities:</h5>
-    
-    <strong>1. Microscopic Feature Analysis:</strong>
-    • Cellular density quantification
-    • Nuclear pleomorphism scoring
-    • Mitotic count estimation
-    • Tissue pattern recognition
-    
-    <strong>2. Diagnostic Classification:</strong>
-    • Normal lung tissue identification
-    • Adenocarcinoma detection (glandular pattern)
-    • Squamous cell carcinoma detection (keratin pattern)
-    • Pathological staging estimation
-    
-    <strong>3. Clinical Reporting:</strong>
-    • Key pathological findings
-    • Confidence scoring
-    • Treatment recommendations
-    • Comprehensive report generation
-    
-    <strong>Upload Requirements:</strong>
-    • H&E stained lung tissue images
-    • 10x-40x magnification recommended
-    • Clear, focused microscopic images
-    • Multiple images for batch analysis
-    </div>
-    """, unsafe_allow_html=True)
 
 # ==================== FOOTER ====================
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #6c757d; padding: 20px; border-top: 1px solid #dee2e6;'>
-    <p><strong>MATHRIX Pathology Analysis System v8.0</strong></p>
-    <p>Advanced Microscopic Image Analysis Platform | For Educational and Research Use</p>
-    <p style='font-size: 0.9em;'><em>All analyses require verification by certified pathologists.</em></p>
+    <p><strong>MATHRIX Geometric Pathology v9.0</strong></p>
+    <p>Structure-Based Analysis | Color-Blind Architecture</p>
+    <p style='font-size: 0.9em;'><em>Analyzing patterns, not colors. Focusing on geometry, not hue.</em></p>
 </div>
 """, unsafe_allow_html=True)
