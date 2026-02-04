@@ -1,8 +1,3 @@
-"""
-Mathrix AI: Renal Cell Carcinoma Grading & Treatment Recommendation
-Professional-grade AI system for Fuhrman grading of renal cell carcinoma
-"""
-
 import streamlit as st
 import cv2
 import numpy as np
@@ -783,3 +778,4 @@ def main():
 
 if _name_ == "_main_":
     main()
+
